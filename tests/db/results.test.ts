@@ -51,6 +51,7 @@ describe('getResults', () => {
   test('getResults zero state', async () => {
     const res = await getResults();
     expect(res.total).toBe(0);
+    expect(res.rows).toHaveLength(11);
     expect(res.rows.every((r) => r.percent === 0 && r.rank === 1)).toBe(true);
   });
 });
