@@ -104,6 +104,9 @@ export function TurnstileWidget({
             sitekey: siteKey,
             appearance: 'interaction-only',
             'refresh-expired': 'auto',
+            // A visible challenge is the user's time, not a stall: pause the watchdog.
+            'before-interactive-callback': stopWatchdog,
+            'after-interactive-callback': startWatchdog,
             callback: (t: string) => {
               stopWatchdog();
               retried.current = false;
