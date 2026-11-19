@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { StrictMode } from 'react';
 import { render, screen, act } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { Leaderboard } from '@/components/Leaderboard';
@@ -111,4 +112,143 @@ test('no polling while hidden', async () => {
     await vi.advanceTimersByTimeAsync(30000);
   });
   expect(fetchImpl).not.toHaveBeenCalled();
+});
+
+// ---- single-flight polling loop ----
+
+function hide() {
+  setVisibility('hidden');
+  document.dispatchEvent(new Event('visibilitychange'));
+}
+function show() {
+  setVisibility('visible');
+  document.dispatchEvent(new Event('visibilitychange'));
+}
+
+function deferredFetch(bodyFor: (n: number) => unknown = () => payload) {
+  const pending: Array<() => void> = [];
+  let n = 0;
+  const fn = vi.fn((_url: string, init?: RequestInit) => {
+    const body = bodyFor(++n);
+    return new Promise<Response>((resolve, reject) => {
+      init?.signal?.addEventListener('abort', () =>
+        reject(new DOMException('aborted', 'AbortError')),
+      );
+      pending.push(() => resolve({ ok: true, json: async () => body } as Response));
+    });
+  });
+  const resolveAll = async () => {
+    await act(async () => {
+      pending.splice(0).forEach((r) => r());
+      await vi.advanceTimersByTimeAsync(0);
+    });
+  };
+  return { fn, impl: fn as unknown as typeof fetch, resolveAll };
+}
+
+async function advance(ms: number) {
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(ms);
+  });
+}
+
+test('resolving polls: exactly one fetch per interval, each applied', async () => {
+  const f = deferredFetch((n) => ({ ...payload, total: 100 + n }));
+  render(<Leaderboard initial={payload} state="open" fetchImpl={f.impl} />);
+  for (let i = 1; i <= 4; i++) {
+    await advance(15000);
+    await f.resolveAll();
+    expect(screen.getByText(`${100 + i} votes cast`)).toBeInTheDocument();
+  }
+  expect(f.fn).toHaveBeenCalledTimes(4);
+  expect(f.fn).toHaveBeenLastCalledWith(
+    '/api/results',
+    expect.objectContaining({ cache: 'no-store', signal: expect.any(AbortSignal) }),
+  );
+});
+
+test('StrictMode: one fetch per interval', async () => {
+  const f = deferredFetch();
+  render(
+    <StrictMode>
+      <Leaderboard initial={payload} state="open" fetchImpl={f.impl} />
+    </StrictMode>,
+  );
+  for (let i = 1; i <= 3; i++) {
+    await advance(15000);
+    expect(f.fn).toHaveBeenCalledTimes(i);
+    await f.resolveAll();
+  }
+});
+
+test('hidden→visible during an in-flight poll does not fork the loop', async () => {
+  const f = deferredFetch();
+  render(<Leaderboard initial={payload} state="open" fetchImpl={f.impl} />);
+  await advance(15000);
+  expect(f.fn).toHaveBeenCalledTimes(1);
+  act(() => {
+    hide();
+    show();
+  });
+  expect(f.fn).toHaveBeenCalledTimes(2);
+  await f.resolveAll();
+  await advance(15000);
+  await f.resolveAll();
+  await advance(15000);
+  await f.resolveAll();
+  expect(f.fn).toHaveBeenCalledTimes(4);
+});
+
+test('visible→visible event during an in-flight poll does not fork the loop', async () => {
+  const f = deferredFetch();
+  render(<Leaderboard initial={payload} state="open" fetchImpl={f.impl} />);
+  await advance(15000);
+  act(() => {
+    show();
+  });
+  expect(f.fn).toHaveBeenCalledTimes(2);
+  await f.resolveAll();
+  await advance(15000);
+  await f.resolveAll();
+  await advance(15000);
+  await f.resolveAll();
+  expect(f.fn).toHaveBeenCalledTimes(4);
+});
+
+test('unmount with a fetch in flight stops polling without warnings', async () => {
+  const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  const f = deferredFetch();
+  const { unmount } = render(<Leaderboard initial={payload} state="open" fetchImpl={f.impl} />);
+  await advance(15000);
+  expect(f.fn).toHaveBeenCalledTimes(1);
+  unmount();
+  await f.resolveAll();
+  await advance(60000);
+  expect(f.fn).toHaveBeenCalledTimes(1);
+  expect(errSpy).not.toHaveBeenCalled();
+  errSpy.mockRestore();
+});
+
+test('hidden skips fetches; resumes on next tick once visible even without an event', async () => {
+  setVisibility('hidden');
+  const f = deferredFetch();
+  render(<Leaderboard initial={payload} state="open" fetchImpl={f.impl} />);
+  await advance(30000);
+  expect(f.fn).toHaveBeenCalledTimes(0);
+  setVisibility('visible');
+  await advance(15000);
+  expect(f.fn).toHaveBeenCalledTimes(1);
+});
+
+test('malformed payload is ignored without crashing', async () => {
+  const bad = {
+    total: 9,
+    rows: [{ ...payload.rows[0], percent: 'x' }],
+  };
+  const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => bad }) as Response);
+  render(<Leaderboard initial={payload} state="open" fetchImpl={fetchImpl as unknown as typeof fetch} />);
+  await advance(15000);
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+  expect(screen.getByText('4 votes cast')).toBeInTheDocument();
+  expect(screen.getByText('Code Red')).toBeInTheDocument();
 });

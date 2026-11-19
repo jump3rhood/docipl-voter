@@ -9,6 +9,7 @@ import {
   formatVotes,
   medalFor,
   totalLabel,
+  type ResultRow,
   type ResultsPayload,
 } from '@/lib/resultsFormat';
 import type { VotingState } from '@/lib/votingState';
@@ -19,10 +20,28 @@ function subheading(state: VotingState): string {
   return 'Results';
 }
 
+const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
+const isStrOrNull = (v: unknown): v is string | null => v === null || typeof v === 'string';
+
+function isRow(x: unknown): x is ResultRow {
+  if (typeof x !== 'object' || x === null) return false;
+  const r = x as Record<string, unknown>;
+  return (
+    typeof r.teamId === 'string' &&
+    typeof r.name === 'string' &&
+    typeof r.slug === 'string' &&
+    isNum(r.votes) &&
+    isNum(r.percent) &&
+    isNum(r.rank) &&
+    isStrOrNull(r.logoUrl) &&
+    isStrOrNull(r.accentColor)
+  );
+}
+
 function isPayload(x: unknown): x is ResultsPayload {
   if (typeof x !== 'object' || x === null) return false;
   const o = x as { total?: unknown; rows?: unknown };
-  return typeof o.total === 'number' && Array.isArray(o.rows);
+  return isNum(o.total) && Array.isArray(o.rows) && o.rows.every(isRow);
 }
 
 export function Leaderboard({
@@ -38,44 +57,55 @@ export function Leaderboard({
 }) {
   const [data, setData] = useState<ResultsPayload>(initial);
   useEffect(() => {
+    const doFetch = fetchImpl ?? fetch;
+    // Single-flight loop: every chain is tagged with a generation; stop() bumps it,
+    // so a superseded chain can neither apply data nor reschedule itself.
+    let gen = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
-    let cancelled = false;
+    let inFlight: AbortController | null = null;
 
-    const visible = () => document.visibilityState !== 'hidden';
-
-    const refresh = async () => {
-      try {
-        const doFetch = fetchImpl ?? fetch;
-        const res = await doFetch('/api/results');
-        if (!res.ok) return;
-        const next: unknown = await res.json();
-        if (!cancelled && isPayload(next)) setData(next);
-      } catch {
-        // keep last good data
-      }
+    const stop = () => {
+      gen++;
+      clearTimeout(timer);
+      timer = undefined;
+      inFlight?.abort();
+      inFlight = null;
     };
 
-    const schedule = () => {
-      if (cancelled || !visible()) return;
-      timer = setTimeout(async () => {
-        await refresh();
-        schedule();
-      }, pollMs);
+    const schedule = (myGen: number) => {
+      if (myGen !== gen) return;
+      timer = setTimeout(() => void tick(myGen), pollMs);
+    };
+
+    const tick = async (myGen: number) => {
+      if (document.visibilityState !== 'hidden') {
+        const ctrl = new AbortController();
+        inFlight = ctrl;
+        try {
+          const res = await doFetch('/api/results', { signal: ctrl.signal, cache: 'no-store' });
+          if (res.ok) {
+            const next: unknown = await res.json();
+            if (myGen === gen && isPayload(next)) setData(next);
+          }
+        } catch {
+          // keep last good data
+        } finally {
+          if (inFlight === ctrl) inFlight = null;
+        }
+      }
+      schedule(myGen);
     };
 
     const onVisibility = () => {
-      clearTimeout(timer);
-      if (visible()) {
-        void refresh();
-        schedule();
-      }
+      if (document.visibilityState === 'hidden') return; // loop skips fetches while hidden
+      stop();
+      void tick(gen);
     };
 
     document.addEventListener('visibilitychange', onVisibility);
-    schedule();
+    schedule(gen);
     return () => {
-      cancelled = true;
-      clearTimeout(timer);
+      stop();
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [pollMs, fetchImpl]);
