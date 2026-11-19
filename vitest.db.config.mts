@@ -17,6 +17,8 @@ export default defineConfig({
     fileParallelism: false,
     env: {
       NEXT_PUBLIC_SITE_URL: 'http://localhost:3000',
+      RATE_LIMIT_VOTE: '2/600',
+      RATE_LIMIT_MINT: '2/600',
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: '1x00000000000000000000AA',
       TURNSTILE_SECRET_KEY: '1x0000000000000000000000000000000AA',
       HASH_SECRET: 'test-hash-secret-test-hash-secret-0123',
