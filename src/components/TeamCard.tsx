@@ -1,17 +1,7 @@
-import Image from 'next/image';
-import { pickTextColor } from '@/lib/contrast';
+import { TeamBadge, teamInitials } from '@/components/TeamBadge';
 import type { Team } from '@/lib/voting';
 
-const FALLBACK_ACCENT = '#2A4F8F';
-
-export function teamInitials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter((w) => w && !/^\d/.test(w))
-    .slice(0, 2)
-    .map((w) => w[0].toUpperCase())
-    .join('');
-}
+export { teamInitials };
 
 export function TeamCard({
   team,
@@ -47,27 +37,12 @@ export function TeamCard({
           ✓
         </span>
       )}
-      {team.logoUrl ? (
-        <Image
-          src={team.logoUrl}
-          alt=""
-          width={64}
-          height={64}
-          unoptimized
-          className="h-16 w-16 object-contain"
-        />
-      ) : (
-        <span
-          aria-hidden="true"
-          style={{
-            backgroundColor: team.accentColor ?? FALLBACK_ACCENT,
-            color: team.accentColor ? pickTextColor(team.accentColor) : '#FFFFFF',
-          }}
-          className="flex h-16 w-16 items-center justify-center rounded-full text-xl font-extrabold"
-        >
-          {teamInitials(team.name)}
-        </span>
-      )}
+      <TeamBadge
+        name={team.name}
+        logoUrl={team.logoUrl}
+        accentColor={team.accentColor}
+        size={64}
+      />
       <span className="text-sm font-semibold leading-tight">{team.name}</span>
     </button>
   );
