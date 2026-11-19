@@ -1,12 +1,15 @@
-export type VoteErrorCode =
-  | 'already_voted'
-  | 'voting_not_open'
-  | 'voting_closed'
-  | 'token_invalid'
-  | 'invalid_team'
-  | 'turnstile_failed'
-  | 'rate_limited'
-  | 'network';
+export const VOTE_ERROR_CODES = [
+  'already_voted',
+  'voting_not_open',
+  'voting_closed',
+  'token_invalid',
+  'invalid_team',
+  'turnstile_failed',
+  'rate_limited',
+  'network',
+] as const;
+
+export type VoteErrorCode = (typeof VOTE_ERROR_CODES)[number];
 
 const MESSAGES: Record<VoteErrorCode, { title: string; body?: string }> = {
   already_voted: { title: "You've already voted!", body: 'Each person can vote only once.' },
