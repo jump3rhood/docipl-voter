@@ -18,6 +18,10 @@ const nextConfig: NextConfig = {
     ];
   },
   partialPrefetching: true,
+  experimental: {
+    // Logo uploads are up to 1 MB; the default Server Action body limit is also 1 MB.
+    serverActions: { bodySizeLimit: "2mb" },
+  },
   turbopack: {
     rules: {
       "*.css": {
