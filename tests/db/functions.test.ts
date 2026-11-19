@@ -302,6 +302,26 @@ test('get_results with no votes: all zero, rank 1', async () => {
   expect(rows.every(r => Number(r.votes) === 0 && Number(r.percent) === 0 && r.rank === 1)).toBe(true);
 });
 
+async function tokenState(hash: string): Promise<string> {
+  const { data, error } = await admin.rpc('get_token_state', { p_token_hash: hash } as never);
+  if (error) throw new Error(error.message);
+  return data as string;
+}
+
+test('token state', async () => {
+  await openWindow(); await mint('tstate');
+  expect(await tokenState('tstate')).toBe('active');
+  expect((await vote('tstate', 'code-red', 'bstate')).status).toBe('ok');
+  expect(await tokenState('tstate')).toBe('used');
+  expect(await tokenState('unknown-hash')).toBe('invalid');
+  const { error } = await admin.from('voting_tokens').insert({ token_hash: 'tstate-exp', expires_at: iso(-60_000), status: 'active' });
+  expect(error).toBeNull();
+  expect(await tokenState('tstate-exp')).toBe('invalid');
+  await mint('tstate-rev');
+  await admin.from('voting_tokens').update({ status: 'revoked' }).eq('token_hash', 'tstate-rev');
+  expect(await tokenState('tstate-rev')).toBe('invalid');
+});
+
 test('anon cannot rpc', async () => {
   const calls: Record<string, Record<string, unknown>> = {
     get_results: {},
@@ -310,6 +330,7 @@ test('anon cannot rpc', async () => {
     mint_token: { p_token_hash: 'x', p_ip_hash: 'i' },
     rate_limit_hit: { p_bucket: 'x', p_key_hash: 'k', p_window_seconds: 60, p_max: 1 },
     get_voter_vote: { p_browser_id_hash: 'b' },
+    get_token_state: { p_token_hash: 'x' },
   };
   for (const [fn, args] of Object.entries(calls)) {
     const { error } = await anon.rpc(fn as never, args as never);

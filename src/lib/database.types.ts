@@ -141,6 +141,9 @@ isOneToOne: true
               "accent_color": string,"logo_url": string,"name": string,"percent": number,"rank": number,"slug": string,"team_id": string,"votes": number
             }[]
                            },
+"get_token_state":
+{ Args: { "p_token_hash": string }; Returns: string
+                           },
 "get_voter_vote":
 { Args: { "p_browser_id_hash": string }; Returns: {
               "team_id": string,"team_name": string
