@@ -40,6 +40,39 @@ describe('voting admin actions', () => {
     expect(await getAdminConfig()).toEqual(before);
   });
 
+  test('empty maxVotes rejected', async () => {
+    jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
+    const before = await getAdminConfig();
+    const window = { start: '2026-11-21T09:00', end: '2026-11-22T21:00' };
+    expect(await saveVotingAction(undefined, form({ ...window, maxVotes: '' }))).toEqual({
+      error: 'Enter max votes (0–1000).',
+    });
+    expect(await saveVotingAction(undefined, form(window))).toEqual({ error: 'Enter max votes (0–1000).' });
+    expect(await getAdminConfig()).toEqual(before);
+  });
+
+  test('missing start or end rejected with friendly copy', async () => {
+    jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
+    expect(await saveVotingAction(undefined, form({ end: '2026-11-22T21:00', maxVotes: '5' }))).toEqual({
+      error: 'Enter a valid start.',
+    });
+    expect(await saveVotingAction(undefined, form({ start: '2026-11-21T09:00', maxVotes: '5' }))).toEqual({
+      error: 'Enter a valid end.',
+    });
+  });
+
+  test('save never changes enabled', async () => {
+    jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
+    const save = () =>
+      saveVotingAction(undefined, form({ start: '2026-11-21T09:00', end: '2026-11-22T21:00', maxVotes: '3' }));
+    await toggleVotingAction(form({ enabled: 'true' }));
+    await save();
+    expect((await getAdminConfig()).enabled).toBe(true);
+    await toggleVotingAction(form({ enabled: 'false' }));
+    await save();
+    expect((await getAdminConfig()).enabled).toBe(false);
+  });
+
   test('saveVotingAction persists, end before start errors, toggle flips enabled', async () => {
     jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
     const r = await saveVotingAction(

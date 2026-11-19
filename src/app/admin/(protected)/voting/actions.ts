@@ -3,13 +3,13 @@
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { requireAdmin } from '@/lib/adminAuth';
-import { getAdminConfig, updateAdminConfig } from '@/lib/admin';
+import { setVotingEnabled, updateVotingWindow } from '@/lib/admin';
 import { istLocalToDate } from '@/lib/ist';
 
 export type SaveState = { ok?: true; error?: string } | undefined;
 
 const istField = (message: string) =>
-  z.string().transform((v, ctx) => {
+  z.string({ error: message }).transform((v, ctx) => {
     try {
       return istLocalToDate(v);
     } catch {
@@ -18,14 +18,23 @@ const istField = (message: string) =>
     }
   });
 
+const MAX_VOTES_REQUIRED = 'Enter max votes (0–1000).';
+
 const schema = z.object({
   start: istField('Enter a valid start.'),
   end: istField('Enter a valid end.'),
-  maxVotes: z.coerce
-    .number({ error: 'Max votes must be a number.' })
-    .int('Max votes must be a whole number.')
-    .min(0, 'Max votes must be 0 to 1000.')
-    .max(1000, 'Max votes must be 0 to 1000.'),
+  maxVotes: z
+    .string({ error: MAX_VOTES_REQUIRED })
+    .trim()
+    .min(1, MAX_VOTES_REQUIRED)
+    .transform((v) => Number(v))
+    .pipe(
+      z
+        .number({ error: 'Max votes must be a number.' })
+        .int('Max votes must be a whole number.')
+        .min(0, 'Max votes must be 0 to 1000.')
+        .max(1000, 'Max votes must be 0 to 1000.'),
+    ),
 });
 
 function revalidateAll() {
@@ -47,9 +56,8 @@ export async function saveVotingAction(_prev: SaveState, formData: FormData): Pr
   const { start, end, maxVotes } = parsed.data;
   if (end <= start) return { error: 'End must be after start.' };
   try {
-    // Only the pause/resume toggle changes `enabled`; save keeps the current value.
-    const { enabled } = await getAdminConfig();
-    await updateAdminConfig({ start, end, enabled, maxVotesPerDeviceIp: maxVotes });
+    // Column-level write: `is_enabled` is only ever changed by the pause/resume toggle.
+    await updateVotingWindow({ start, end, maxVotesPerDeviceIp: maxVotes });
   } catch (e) {
     if (e instanceof Error && e.message === 'end_before_start') {
       return { error: 'End must be after start.' };
@@ -64,7 +72,6 @@ export async function toggleVotingAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const raw = formData.get('enabled');
   if (raw !== 'true' && raw !== 'false') return;
-  const c = await getAdminConfig();
-  await updateAdminConfig({ ...c, enabled: raw === 'true' });
+  await setVotingEnabled(raw === 'true');
   revalidateAll();
 }

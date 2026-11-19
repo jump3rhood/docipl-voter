@@ -32,17 +32,21 @@ export async function getAdminConfig(): Promise<AdminConfig> {
   };
 }
 
-export async function updateAdminConfig(c: AdminConfig): Promise<void> {
+export async function updateVotingWindow(w: { start: Date; end: Date; maxVotesPerDeviceIp: number }): Promise<void> {
   const { error } = await getSupabaseAdmin()
     .from('voting_config')
     .update({
-      voting_start: c.start.toISOString(),
-      voting_end: c.end.toISOString(),
-      is_enabled: c.enabled,
-      max_votes_per_device_ip: c.maxVotesPerDeviceIp,
+      voting_start: w.start.toISOString(),
+      voting_end: w.end.toISOString(),
+      max_votes_per_device_ip: w.maxVotesPerDeviceIp,
     })
     .eq('id', 1);
-  if (error) fail('updateAdminConfig', error, { '23514': 'end_before_start' });
+  if (error) fail('updateVotingWindow', error, { '23514': 'end_before_start' });
+}
+
+export async function setVotingEnabled(enabled: boolean): Promise<void> {
+  const { error } = await getSupabaseAdmin().from('voting_config').update({ is_enabled: enabled }).eq('id', 1);
+  if (error) fail('setVotingEnabled', error);
 }
 
 export async function listAllTeams(): Promise<AdminTeam[]> {
@@ -104,8 +108,9 @@ export async function setTeamLogo(
   if (!ext) throw new Error('unsupported_type');
   if (file.bytes.byteLength > MAX_LOGO_BYTES) throw new Error('too_large');
   const db = getSupabaseAdmin();
-  const team = await db.from('teams').select('slug, logo_url').eq('id', id).single();
+  const team = await db.from('teams').select('slug, logo_url').eq('id', id).maybeSingle();
   if (team.error) fail('setTeamLogo', team.error);
+  if (!team.data) throw new Error('not_found');
   const slug = team.data.slug;
   if (!/^[a-z0-9-]+$/.test(slug)) throw new Error('invalid_slug');
   const bucket = db.storage.from(LOGO_BUCKET);

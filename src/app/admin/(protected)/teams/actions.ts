@@ -101,6 +101,7 @@ export async function uploadLogoAction(_prev: TeamState, formData: FormData): Pr
   try {
     await setTeamLogo(id, { bytes: await file.arrayBuffer(), type: file.type });
   } catch (e) {
+    if (e instanceof Error && e.message === 'not_found') return { error: 'Team not found.' };
     if (e instanceof Error && e.message === 'too_large') return { error: 'Image must be 1 MB or smaller.' };
     if (e instanceof Error && e.message === 'unsupported_type') return { error: 'Use a PNG, JPG or WEBP image.' };
     throw e;

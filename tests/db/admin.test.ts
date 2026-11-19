@@ -8,8 +8,9 @@ import {
   purgeIdentifiers,
   resetVotes,
   setTeamLogo,
-  updateAdminConfig,
+  setVotingEnabled,
   updateTeam,
+  updateVotingWindow,
 } from '@/lib/admin';
 
 beforeEach(async () => {
@@ -81,11 +82,21 @@ test('duplicate slug rejected', async () => {
   await expect(createTeam({ name: 'B', slug: 'zz-dup', accentColor: null, displayOrder: 99 })).rejects.toThrow('duplicate_slug');
 });
 
-test('updateAdminConfig rejects end before start', async () => {
+test('updateVotingWindow rejects end before start and leaves enabled alone', async () => {
   const c = await getAdminConfig();
-  await expect(updateAdminConfig({ ...c, end: new Date(c.start.getTime() - 1000) })).rejects.toThrow('end_before_start');
-  await updateAdminConfig({ ...c, maxVotesPerDeviceIp: 5 });
-  expect((await getAdminConfig()).maxVotesPerDeviceIp).toBe(5);
+  const bad = { start: c.start, end: new Date(c.start.getTime() - 1000), maxVotesPerDeviceIp: 1 };
+  await expect(updateVotingWindow(bad)).rejects.toThrow('end_before_start');
+  await updateVotingWindow({ start: c.start, end: c.end, maxVotesPerDeviceIp: 5 });
+  const after = await getAdminConfig();
+  expect(after.maxVotesPerDeviceIp).toBe(5);
+  expect(after.enabled).toBe(c.enabled);
+  await setVotingEnabled(!c.enabled);
+  expect((await getAdminConfig()).enabled).toBe(!c.enabled);
+});
+
+test('setTeamLogo unknown team throws not_found', async () => {
+  const id = '11111111-1111-1111-1111-111111111111';
+  await expect(setTeamLogo(id, { bytes: new ArrayBuffer(4), type: 'image/png' })).rejects.toThrow('not_found');
 });
 
 test('setTeamLogo uploads to team-logos and sets logo_url', async () => {

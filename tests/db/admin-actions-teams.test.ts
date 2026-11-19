@@ -85,6 +85,13 @@ describe('team admin actions', () => {
     expect(await updateTeamAction(undefined, form({ id: unknown, ...base }))).toEqual({ error: 'Team not found.' });
   });
 
+  test('upload logo unknown uuid gives Team not found', async () => {
+    jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
+    const png = new File([PNG], 'l.png', { type: 'image/png' });
+    const unknown = '11111111-1111-1111-1111-111111111111';
+    expect(await uploadLogoAction(undefined, form({ id: unknown, logo: png }))).toEqual({ error: 'Team not found.' });
+  });
+
   test('duplicate slug error', async () => {
     jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
     await createTeamAction(undefined, newTeam());
