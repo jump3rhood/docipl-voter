@@ -46,8 +46,8 @@ For local dev, Cloudflare Turnstile test keys work (see comments in `.env.exampl
 
 ### During voting
 
-- Watch the Vercel logs for `[vote] no client IP header`, `turnstile_failed` responses and spikes of 429s. If Indian mobile carriers' CGNAT (many people behind one IP) causes false blocks, raise `RATE_LIMIT_MINT` / `RATE_LIMIT_VOTE` or the per-device cap (`max_votes_per_device_ip`).
-- To pause voting, use the toggle in `/admin/voting`. Toggle it again to resume.
+- Watch the Vercel logs for `[vote] no client IP header`, `turnstile_failed` responses and spikes of 429s. If Indian mobile carriers' CGNAT (many people behind one IP) causes false blocks, raise `RATE_LIMIT_MINT` / `RATE_LIMIT_VOTE` or the "Max votes per device + network" field in `/admin/voting` (column `max_votes_per_device_ip`).
+- To pause voting, press `PAUSE VOTING` in `/admin/voting`. Press `RESUME VOTING` to resume.
 - Link-preview crawlers (Instagram, WhatsApp) may open `/v` and mint ballot tokens that are never used. That is harmless: tokens expire and do not count as votes.
 
 ### Accepted residual risk
