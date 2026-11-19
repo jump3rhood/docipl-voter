@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { BrandHeader } from "@/components/BrandHeader";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -20,7 +21,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0a0a0a",
+  themeColor: "#0B2A5B",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -29,13 +30,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4">
-          <header className="py-4">
-            <span className="text-lg font-extrabold tracking-widest">
-              DOC IPL
-            </span>
-          </header>
+      <body className="flex min-h-dvh flex-col bg-navy font-sans text-white">
+        <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5">
+          <BrandHeader />
           <main className="flex flex-1 flex-col">{children}</main>
         </div>
       </body>
