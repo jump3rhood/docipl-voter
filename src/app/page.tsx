@@ -1,10 +1,19 @@
+import { Suspense } from 'react';
+import { connection } from 'next/server';
+import { getVotingStatus } from '@/lib/voting';
+import { formatIST } from '@/lib/formatIST';
+import { StatusScreen } from '@/components/StatusScreen';
+
+async function Status() {
+  await connection();
+  const { state, start } = await getVotingStatus();
+  return <StatusScreen state={state} startLabel={formatIST(start)} />;
+}
+
 export default function Home() {
   return (
-    <div className="flex flex-1 flex-col justify-center gap-3 pb-16">
-      <h1 className="text-3xl font-extrabold leading-tight">
-        DOC IPL PEOPLE&apos;S CHOICE
-      </h1>
-      <p className="text-base">Voting opens soon.</p>
-    </div>
+    <Suspense fallback={<div className="flex-1 bg-navy" aria-hidden />}>
+      <Status />
+    </Suspense>
   );
 }
