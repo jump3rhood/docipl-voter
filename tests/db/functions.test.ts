@@ -331,6 +331,8 @@ test('anon cannot rpc', async () => {
     rate_limit_hit: { p_bucket: 'x', p_key_hash: 'k', p_window_seconds: 60, p_max: 1 },
     get_voter_vote: { p_browser_id_hash: 'b' },
     get_token_state: { p_token_hash: 'x' },
+    admin_reset_votes: {},
+    admin_purge_identifiers: {},
   };
   for (const [fn, args] of Object.entries(calls)) {
     const { error } = await anon.rpc(fn as never, args as never);

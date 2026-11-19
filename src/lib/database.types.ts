@@ -131,7 +131,13 @@ isOneToOne: true
             [_ in never]: never
           }
           Functions: {
-            "cast_vote":
+            "admin_purge_identifiers":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           },
+"admin_reset_votes":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
+"cast_vote":
 { Args: { "p_browser_id_hash": string,"p_device_hash": string,"p_ip_hash": string,"p_team_id": string,"p_token_hash": string,"p_user_agent_hash": string }; Returns: {
               "status": string,"team_id": string,"team_name": string
             }[]
