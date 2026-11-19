@@ -81,7 +81,7 @@ export async function updateTeam(
   id: string,
   t: { name: string; slug: string; accentColor: string | null; displayOrder: number; isActive: boolean },
 ): Promise<void> {
-  const { error } = await getSupabaseAdmin()
+  const { data, error } = await getSupabaseAdmin()
     .from('teams')
     .update({
       name: t.name,
@@ -90,13 +90,15 @@ export async function updateTeam(
       display_order: t.displayOrder,
       is_active: t.isActive,
     })
-    .eq('id', id);
+    .eq('id', id)
+    .select('id');
   if (error) fail('updateTeam', error, { '23505': 'duplicate_slug' });
+  if (!data || data.length === 0) throw new Error('not_found');
 }
 
 export async function setTeamLogo(
   id: string,
-  file: { bytes: ArrayBuffer; type: string; slug: string },
+  file: { bytes: ArrayBuffer; type: string; slug?: string },
 ): Promise<string> {
   const ext = EXT[file.type];
   if (!ext) throw new Error('unsupported_type');

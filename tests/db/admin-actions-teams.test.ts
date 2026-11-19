@@ -75,6 +75,16 @@ describe('team admin actions', () => {
     expect(data).toEqual({ accent_color: null, is_active: false });
   });
 
+  test('bad or unknown id gives Team not found', async () => {
+    jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
+    const base = { name: 'ZZ X', slug: 'zz-x', accent: '#112233', displayOrder: '1' };
+    const png = new File([PNG], 'l.png', { type: 'image/png' });
+    expect(await updateTeamAction(undefined, form({ id: 'nope', ...base }))).toEqual({ error: 'Team not found.' });
+    expect(await uploadLogoAction(undefined, form({ id: 'nope', logo: png }))).toEqual({ error: 'Team not found.' });
+    const unknown = '11111111-1111-1111-1111-111111111111';
+    expect(await updateTeamAction(undefined, form({ id: unknown, ...base }))).toEqual({ error: 'Team not found.' });
+  });
+
   test('duplicate slug error', async () => {
     jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
     await createTeamAction(undefined, newTeam());
