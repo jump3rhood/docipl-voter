@@ -3,6 +3,7 @@ import { connection } from 'next/server';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getActiveTeams, getVotingStatus } from '@/lib/voting';
+import { getServerEnv } from '@/lib/env';
 import { formatIST } from '@/lib/formatIST';
 import { VOTER_COOKIE } from '@/lib/voterCookie';
 import { hashId, hashToken } from '@/lib/identity';
@@ -33,7 +34,7 @@ async function Ballot({ params }: { params: Promise<{ token: string }> }) {
       </div>
     );
   }
-  return <BallotClient token={token} teams={teams} />;
+  return <BallotClient token={token} teams={teams} siteKey={getServerEnv().TURNSTILE_SITE_KEY} />;
 }
 
 export default function VotePage({ params }: { params: Promise<{ token: string }> }) {

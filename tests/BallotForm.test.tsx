@@ -150,3 +150,30 @@ test('selecting a different team clears the error alert', async () => {
   await userEvent.click(screen.getByRole('radio', { name: /smash squad/i }));
   expect(screen.queryByRole('alert')).toBeNull();
 });
+
+test('canSubmit=false shows Verifying… and blocks submit', async () => {
+  const submit = okSubmit();
+  render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} canSubmit={false} />);
+  await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
+  const btn = screen.getByRole('button', { name: /verifying/i });
+  expect(btn).toBeDisabled();
+  await userEvent.click(btn);
+  expect(submit).not.toHaveBeenCalled();
+});
+
+test('onSubmitFailed called after error result', async () => {
+  const onSubmitFailed = vi.fn();
+  const submit = vi.fn(async (): Promise<SubmitResult> => ({ ok: false, code: 'rate_limited' }));
+  render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} onSubmitFailed={onSubmitFailed} />);
+  await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
+  await userEvent.click(voteButton());
+  await screen.findByRole('alert');
+  expect(onSubmitFailed).toHaveBeenCalledTimes(1);
+});
+
+test('footerExtra rendered', () => {
+  render(
+    <BallotForm teams={teams} submit={okSubmit()} onVoted={vi.fn()} footerExtra={<div data-testid="extra" />} />,
+  );
+  expect(screen.getByTestId('extra')).toBeInTheDocument();
+});

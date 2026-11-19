@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import type { Team } from '@/lib/voting';
 import { voteErrorMessage, type VoteErrorCode } from '@/lib/voteMessages';
@@ -19,10 +19,16 @@ export function BallotForm({
   teams,
   submit,
   onVoted,
+  canSubmit = true,
+  onSubmitFailed,
+  footerExtra,
 }: {
   teams: Team[];
   submit: (teamId: string) => Promise<SubmitResult>;
   onVoted: (teamName: string) => void;
+  canSubmit?: boolean;
+  onSubmitFailed?: () => void;
+  footerExtra?: ReactNode;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -30,7 +36,7 @@ export function BallotForm({
   const inFlight = useRef(false);
 
   async function handleSubmit() {
-    if (!selectedId || inFlight.current) return;
+    if (!selectedId || !canSubmit || inFlight.current) return;
     inFlight.current = true;
     setSubmitting(true);
     setError(null);
@@ -48,6 +54,7 @@ export function BallotForm({
     setError(result.code);
     setSubmitting(false);
     inFlight.current = false;
+    onSubmitFailed?.();
   }
 
   const terminal = error ? TERMINAL[error] : undefined;
@@ -82,6 +89,7 @@ export function BallotForm({
       </div>
 
       <div className="sticky bottom-0 mt-auto bg-gradient-to-t from-navy via-navy to-transparent pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-6">
+        {footerExtra}
         {message && (
           <div role="alert" className="mb-3 rounded-xl bg-navy-dark p-3 text-center">
             <p className="font-bold text-brand-yellow">{message.title}</p>
@@ -99,7 +107,7 @@ export function BallotForm({
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={!selectedId || submitting}
+          disabled={!selectedId || !canSubmit || submitting}
           className={`${primaryButtonClass} gap-2 disabled:cursor-not-allowed disabled:opacity-50`}
         >
           {submitting ? (
@@ -110,6 +118,8 @@ export function BallotForm({
               />
               Submitting…
             </>
+          ) : selectedId && !canSubmit ? (
+            'Verifying…'
           ) : (
             'CAST MY VOTE'
           )}
