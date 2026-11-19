@@ -9,7 +9,7 @@ export function Heartbeat({ className }: { className?: string }) {
       strokeWidth={2}
       strokeLinecap="round"
       strokeLinejoin="round"
-      className={`h-6 w-full ${className ?? ""}`}
+      className={["h-6 w-full", className].filter(Boolean).join(" ")}
     >
       <polyline
         vectorEffect="non-scaling-stroke"
