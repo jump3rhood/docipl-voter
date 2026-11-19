@@ -29,3 +29,14 @@ Collected from the Phase 1–2 reviews. Each later plan must account for the ite
 - Turnstile: BallotForm needs a `canSubmit` gate (no submit until the widget has a token), and the widget must be reset after every failed submit.
 - `/vote/[token]` needs a page title and an empty-team-list message.
 - `/v` becomes a token-minting route handler: every link to it must stay a plain `<a>` (no `next/link` prefetch).
+
+## From Phase 4+5 final review (open items, non-blocking)
+- **Turnstile watchdog vs. a visible challenge:** the 12s timeout can reset a checkbox challenge the user hasn't clicked yet, and the "taking too long" notice can appear beside a working widget. Fix: stop the watchdog in `before-interactive-callback` and restart it in `after-interactive-callback`. Worth doing before go-live, because Instagram's in-app browser triggers interactive challenges more often.
+- **Late script after the 10s timeout:** the widget never renders and only Reload recovers. Acceptable, since the notice is shown.
+- **Origin check on Vercel Preview:** off production, compare against `req.nextUrl.origin` rather than `SITE_URL`. Otherwise previews 403 every vote.
+- **README go-live additions:**
+  - `NEXT_PUBLIC_SITE_URL` must equal the production origin exactly (scheme + host, no path), or every vote returns 403.
+  - Preview deployments must use a separate Supabase project (or no DB env vars), and Vercel Deployment Protection must stay on for previews.
+  - Keep Vercel's "Automatically expose System Environment Variables" on, because the `VERCEL_ENV` checks depend on it.
+- **Logging:** add a `console.warn` on the 415 and Origin rejections, which both return `token_invalid`, to make misconfiguration debuggable.
+- **Deferred:** content-length early reject; rate limiting on GET `/vote/[token]` and `/thanks` (use the Vercel firewall); widget and BallotClient reset tests (cover with a real-device check); a test for the ok-with-null-teamName path.
