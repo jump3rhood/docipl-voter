@@ -350,7 +350,14 @@ describe('POST /api/vote', () => {
       body: JSON.stringify(ballot(token, await teamId('code-red'))),
     });
     const textSpy = vi.spyOn(req, 'text');
-    const res = await POST(req);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    let res;
+    try {
+      res = await POST(req);
+      expect(warn).toHaveBeenCalledWith('[vote] rejected: size');
+    } finally {
+      warn.mockRestore();
+    }
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ ok: false, code: 'token_invalid' });
     expect(textSpy).not.toHaveBeenCalled();

@@ -45,6 +45,7 @@ describe('parseServerEnv', () => {
   describe('Turnstile test keys on Vercel production', () => {
     const real = {
       ...valid,
+      ADMIN_PASSWORD: 'a-long-production-password-0123456789',
       NEXT_PUBLIC_TURNSTILE_SITE_KEY: '0x4AAAAAAAreal-site-key',
       TURNSTILE_SECRET_KEY: '0x4AAAAAAAreal-secret-key',
     };
@@ -66,6 +67,13 @@ describe('parseServerEnv', () => {
           .toThrow(/NEXT_PUBLIC_TURNSTILE_SITE_KEY/);
       },
     );
+    test('short ADMIN_PASSWORD rejected in production, long accepted', () => {
+      expect(() => parseServerEnv({ ...real, ADMIN_PASSWORD: 'x'.repeat(19), VERCEL_ENV: 'production' }))
+        .toThrow(/ADMIN_PASSWORD/);
+      expect(() => parseServerEnv({ ...real, ADMIN_PASSWORD: 'x'.repeat(20), VERCEL_ENV: 'production' }))
+        .not.toThrow();
+      expect(() => parseServerEnv({ ...valid, VERCEL_ENV: 'preview' })).not.toThrow();
+    });
     test('test keys allowed in preview and locally', () => {
       expect(() => parseServerEnv({ ...valid, VERCEL_ENV: 'preview' })).not.toThrow();
       expect(() => parseServerEnv(valid)).not.toThrow();

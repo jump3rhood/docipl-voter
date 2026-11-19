@@ -3,12 +3,15 @@
 Plain-language steps for running the Doc IPL vote. Admin lives at `/admin` (log in with the admin password). Pages: Dashboard (`/admin`), Voting (`/admin/voting`), Teams (`/admin/teams`), Results (`/admin/results`).
 
 ## Before launch
-- Work through the Go-live checklist in the README (database, Turnstile keys, Vercel settings, secrets).
-- In Teams, check every team name and upload its logo.
-- In Voting, set the real start and end time (India time) and "Max votes per device + network". Leave voting paused for now.
-- Test on real phones (see the manual checklist in `TEST-MATRIX.md`).
-- Clear out test votes: pause voting (`PAUSE VOTING` on `/admin/voting`), then go to the danger zone on the Results page (`/admin/results`) and run RESET (type `RESET`). It only works while voting is paused. Do this before launch, never during.
-- Put the link `https://<your-site>/v` into HeyDM.
+1. Work through the Go-live checklist in the README (database, Turnstile keys, Vercel settings, secrets, deploy).
+2. In Teams, check every team name and upload its logo.
+3. In Voting, set "Max votes per device + network". To test, set the start to now and the end to later (India time) and press Save. The seeded window starts in the future, and paused or out-of-window phones only see the paused screen.
+4. Press `RESUME VOTING` on `/admin/voting`.
+5. Test on real phones via the DM link (see the manual checklist in `TEST-MATRIX.md`).
+6. Press `PAUSE VOTING`.
+7. Clear out test votes: go to the danger zone on the Results page (`/admin/results`) and run RESET (type `RESET`). It only works while voting is paused. Do this before launch, never during.
+8. In Voting, set the real start and end time (India time) and press Save. Leave voting paused until launch, or press `RESUME VOTING` at launch time.
+9. Put the link `https://<your-site>/v` into HeyDM. The host must be exactly the `NEXT_PUBLIC_SITE_URL` host, not another `*.vercel.app` alias: other hosts get 403 and fail Turnstile.
 
 ## Opening voting
 1. In Voting, confirm the start and end times and press Save.
@@ -31,7 +34,7 @@ Many phones on one mobile network can look like one person. If supporters report
 Do not change `HASH_SECRET` during voting.
 
 ## Closing voting
-Voting closes by itself at the end time. To close earlier, press `PAUSE VOTING` and set the end time to now.
+Voting closes by itself at the end time. To close earlier, press `PAUSE VOTING` and set the end time to a minute ago (not "now").
 
 ## Export the results
 On `/admin/results`, use "Download results CSV" and "Download votes CSV": the results table (team, votes, percent) and the all-votes file (team and time only). Do this before any purge.

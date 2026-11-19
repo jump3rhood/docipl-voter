@@ -33,16 +33,17 @@ For local dev, Cloudflare Turnstile test keys work (see comments in `.env.exampl
 5. Use real (non-test) Turnstile keys in production. The app refuses to start on `VERCEL_ENV=production` with the `1x0000…`/`2x0000…`/`3x0000…` test keys.
 6. Generate `HASH_SECRET` once (`openssl rand -hex 32`). Never rotate it during voting: every IP, device and voter hash would change, so duplicate checks and per-device caps would reset.
 7. Set the Vercel env vars from `.env.example`. `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are server-only; never expose them to the browser.
-8. Deploy to Vercel. Do not put a Cloudflare proxy (orange cloud) in front of Vercel: the client IP is read from `x-forwarded-for`, which a proxy would replace with its own address. If you add one, switch IP extraction to `cf-connecting-ip` first.
-9. Before announcing, do a real-device run with the production keys: send the link by Instagram DM to an iPhone and an Android phone, open it in the in-app browser, then use "Open in browser", and try back and refresh on the ballot and thank-you pages.
-10. `NEXT_PUBLIC_SITE_URL` must equal the production origin exactly (the vote API checks the request origin against it).
-11. Previews must use a separate Supabase project (or no DB env vars), and Vercel Deployment Protection must stay on.
-12. Keep "Automatically expose System Environment Variables" on in Vercel: the `VERCEL_ENV` checks depend on it.
-13. `ADMIN_PASSWORD` must be 20+ random characters and `ADMIN_SESSION_SECRET` 32+ random bytes. Sessions cannot be revoked one by one; rotating `ADMIN_SESSION_SECRET` logs everyone out.
-14. Upload team logos in `/admin/teams`.
-15. Set the real voting window in `/admin/voting`.
-16. Put the DM link `https://<host>/v` into HeyDM.
-17. When running local browser tests, keep `.playwright-mcp/` (or any test output) outside the project folder: the Next dev server watches it and reloads in a loop.
+8. `NEXT_PUBLIC_SITE_URL` must equal the production origin exactly (the vote API checks the request origin against it).
+9. `ADMIN_PASSWORD` must be 20+ random characters (the app refuses to start on production with a shorter one) and `ADMIN_SESSION_SECRET` 32+ random bytes. Sessions cannot be revoked one by one; rotating `ADMIN_SESSION_SECRET` logs everyone out.
+10. Previews must use a separate Supabase project (or no DB env vars), and Vercel Deployment Protection must stay on.
+11. Keep "Automatically expose System Environment Variables" on in Vercel: the `VERCEL_ENV` checks depend on it.
+12. Deploy to Vercel. Redeploy after any env change: env vars are read at build/start, so changes do not apply to the running deployment. Do not put a Cloudflare proxy (orange cloud) in front of Vercel: the client IP is read from `x-forwarded-for`, which a proxy would replace with its own address. If you add one, switch IP extraction to `cf-connecting-ip` first.
+13. Upload team logos in `/admin/teams`.
+14. Set the voting window in `/admin/voting`. For the real-device test you will temporarily set it around now, then reset (see the runbook "Before launch").
+15. Before announcing, do a real-device run with the production keys, following "Before launch" in [docs/RUNBOOK.md](docs/RUNBOOK.md): send the link by Instagram DM to an iPhone and an Android phone, open it in the in-app browser, then use "Open in browser", and try back and refresh on the ballot and thank-you pages. Afterwards pause, RESET the test votes and set the real window.
+16. Put the DM link `https://<host>/v` into HeyDM. `<host>` must be exactly the host in `NEXT_PUBLIC_SITE_URL`, not another `*.vercel.app` alias of the project: other hosts get 403 and fail Turnstile.
+17. Announce.
+18. When running local browser tests, keep `.playwright-mcp/` (or any test output) outside the project folder: the Next dev server watches it and reloads in a loop.
 
 ### During voting
 
@@ -58,4 +59,4 @@ Start on the free `*.vercel.app` domain. To move to a custom domain later, only 
 
 ## Instagram/HeyDM link
 
-The DM link is `https://<host>/v`. Send the same link to everyone; each visitor gets their own one-time ballot token.
+The DM link is `https://<host>/v`, where `<host>` is exactly the `NEXT_PUBLIC_SITE_URL` host (not another `*.vercel.app` alias: other hosts get 403 and fail Turnstile). Send the same link to everyone; each visitor gets their own one-time ballot token.

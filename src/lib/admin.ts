@@ -33,20 +33,27 @@ export async function getAdminConfig(): Promise<AdminConfig> {
 }
 
 export async function updateVotingWindow(w: { start: Date; end: Date; maxVotesPerDeviceIp: number }): Promise<void> {
-  const { error } = await getSupabaseAdmin()
+  const { data, error } = await getSupabaseAdmin()
     .from('voting_config')
     .update({
       voting_start: w.start.toISOString(),
       voting_end: w.end.toISOString(),
       max_votes_per_device_ip: w.maxVotesPerDeviceIp,
     })
-    .eq('id', 1);
+    .eq('id', 1)
+    .select('id');
   if (error) fail('updateVotingWindow', error, { '23514': 'end_before_start' });
+  if (!data || data.length === 0) throw new Error('config_missing');
 }
 
 export async function setVotingEnabled(enabled: boolean): Promise<void> {
-  const { error } = await getSupabaseAdmin().from('voting_config').update({ is_enabled: enabled }).eq('id', 1);
+  const { data, error } = await getSupabaseAdmin()
+    .from('voting_config')
+    .update({ is_enabled: enabled })
+    .eq('id', 1)
+    .select('id');
   if (error) fail('setVotingEnabled', error);
+  if (!data || data.length === 0) throw new Error('config_missing');
 }
 
 export async function listAllTeams(): Promise<AdminTeam[]> {

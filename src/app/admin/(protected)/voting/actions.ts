@@ -18,7 +18,8 @@ const istField = (message: string) =>
     }
   });
 
-const MAX_VOTES_REQUIRED = 'Enter max votes (0–1000).';
+const MISSING_CONFIG = 'Voting settings are missing — run the seed.';
+const MAX_VOTES_REQUIRED ='Enter max votes (0–1000).';
 
 const schema = z.object({
   start: istField('Enter a valid start.'),
@@ -62,6 +63,7 @@ export async function saveVotingAction(_prev: SaveState, formData: FormData): Pr
     if (e instanceof Error && e.message === 'end_before_start') {
       return { error: 'End must be after start.' };
     }
+    if (e instanceof Error && e.message === 'config_missing') return { error: MISSING_CONFIG };
     throw e;
   }
   revalidateAll();
@@ -72,6 +74,11 @@ export async function toggleVotingAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const raw = formData.get('enabled');
   if (raw !== 'true' && raw !== 'false') return;
-  await setVotingEnabled(raw === 'true');
+  try {
+    await setVotingEnabled(raw === 'true');
+  } catch (e) {
+    if (e instanceof Error && e.message === 'config_missing') throw new Error(MISSING_CONFIG);
+    throw e;
+  }
   revalidateAll();
 }

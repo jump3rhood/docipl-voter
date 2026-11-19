@@ -87,7 +87,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return fail(403, 'token_invalid');
     }
     const declaredLength = Number(req.headers.get('content-length'));
-    if (declaredLength > MAX_BODY_CHARS) return fail(400, 'token_invalid');
+    if (declaredLength > MAX_BODY_CHARS) {
+      console.warn('[vote] rejected: size');
+      return fail(400, 'token_invalid');
+    }
 
     const body = await parseBody(req);
     if (!body.ok) return fail(400, body.code);

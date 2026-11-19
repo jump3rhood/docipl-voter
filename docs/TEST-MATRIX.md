@@ -21,6 +21,7 @@ Automated tests: `npm test` (unit) and `npm run test:db` (needs Docker and local
 | Simultaneous votes | tests/db/functions.test.ts: `cast_vote concurrency`, `cast_vote concurrency: same browser, different tokens`; tests/db/route-vote.test.ts: `api: concurrent same token`; tests/db/load.test.ts: `api load: 10 concurrent requests on one token`, `api load: same cookie, 10 concurrent tokens`, `api load: device cap under concurrency` | no |
 
 ## Other automated coverage
+- Load tests: tests/db/load.test.ts checks correctness under concurrency, in-process, with high mocked rate limits. It is not capacity testing of Vercel or Supabase.
 - Admin auth and session: tests/adminSession.test.ts, tests/adminActions.test.ts (`rate limited: error, no cookie, even with the right password`, `correct password sets session cookie and redirects`, `deletes cookie with path / and redirects to login`).
 - Admin actions and export: tests/db/admin-actions-voting.test.ts, tests/db/admin-actions-teams.test.ts, tests/db/admin-export.test.ts (`401 without cookie`, `reset needs RESET`, `reset refused while enabled`, `purge needs PURGE, refused while enabled, keeps votes`), tests/db/admin.test.ts.
 - Results: tests/db/results.test.ts, tests/db/route-results.test.ts, tests/Leaderboard.test.tsx.

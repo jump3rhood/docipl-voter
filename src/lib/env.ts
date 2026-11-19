@@ -61,6 +61,9 @@ export function parseServerEnv(source: Record<string, string | undefined>): Serv
   }
   const d = result.data;
   if (source.VERCEL_ENV === 'production') {
+    if (d.ADMIN_PASSWORD.length < 20) {
+      throw new Error('ADMIN_PASSWORD must be at least 20 characters in production');
+    }
     const testKeys = (['NEXT_PUBLIC_TURNSTILE_SITE_KEY', 'TURNSTILE_SECRET_KEY'] as const).filter(
       (name) => TURNSTILE_TEST_KEY.test(d[name]),
     );

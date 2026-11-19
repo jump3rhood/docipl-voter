@@ -37,7 +37,21 @@ async function seedVote() {
   await admin.from('rate_limits').insert({ bucket: 'b', key_hash: 'k', window_start: new Date().toISOString(), count: 1 });
 }
 
-test('admin_reset_votes refuses when enabled', async () => {
+test('missing config row -> config_missing', async () => {
+  const { data } = await admin.from('voting_config').select('*').eq('id', 1).single();
+  expect(data).not.toBeNull();
+  try {
+    await admin.from('voting_config').delete().eq('id', 1);
+    await expect(
+      updateVotingWindow({ start: new Date(Date.now()), end: new Date(Date.now() + 3600_000), maxVotesPerDeviceIp: 3 }),
+    ).rejects.toThrow('config_missing');
+    await expect(setVotingEnabled(true)).rejects.toThrow('config_missing');
+  } finally {
+    await admin.from('voting_config').upsert(data!);
+  }
+});
+
+test('admin_reset_votes refuses when enabled',async () => {
   await openWindow();
   await seedVote();
   expect(await resetVotes()).toBe('refused');
