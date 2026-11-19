@@ -22,7 +22,7 @@ const CAST_STATUSES: readonly string[] = [
 ];
 
 /** Returns true if the hit is allowed. */
-export async function rateLimitHit(bucket: 'mint' | 'vote', keyHash: string): Promise<boolean> {
+export async function rateLimitHit(bucket: 'mint' | 'vote' | 'adminLogin', keyHash: string): Promise<boolean> {
   const { max, windowSeconds } = getServerEnv().rateLimits[bucket];
   const { data, error } = await getSupabaseAdmin().rpc('rate_limit_hit', {
     p_bucket: bucket,
