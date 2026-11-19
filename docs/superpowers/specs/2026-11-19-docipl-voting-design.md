@@ -298,5 +298,8 @@ This session covers **Phases 1–2**.
 ## 12a. Test matrix (Phase 8, from the brief)
 Duplicate voting · expired token · reused token · voting before start · voting after end · invalid team · invalid Turnstile · rate limiting · refresh after voting · multiple browsers · mobile Safari · Chrome Android · Instagram in-app browser (iOS and Android) and "Open in Safari" · slow network · simultaneous votes on the same token.
 
+## 12b. Implementation notes
+As built: the admin route is `/admin/voting` (not `/admin/settings`), logout is a Server Action (not an API route), and `Referrer-Policy` is `same-origin`.
+
 ## 13. Left to the builder
 Pace: no fixed deadline was given, so build phase by phase. Exact Tailwind styling, the component breakdown, how the fingerprint is calculated, test tooling details, and the CSV format details.

@@ -4,7 +4,7 @@ Mobile-first Next.js + Supabase voting app for a one-weekend Instagram campaign.
 
 ## Status
 
-Phases 1-2 are done: project scaffold, database schema and voting functions. The ballot UI, vote API, results and admin area are upcoming, so the `/v` link does not work yet.
+All build phases are complete: setup, database, voting UI, vote flow with anti-abuse checks, live results, admin area and hardening. What remains is the go-live steps below. Organisers: see [docs/RUNBOOK.md](docs/RUNBOOK.md). Test coverage: [docs/TEST-MATRIX.md](docs/TEST-MATRIX.md).
 
 ## Local setup
 
@@ -27,7 +27,7 @@ For local dev, Cloudflare Turnstile test keys work (see comments in `.env.exampl
 ## Go-live checklist
 
 1. Create a free Supabase project.
-2. `npx supabase link --project-ref <ref>` then `npx supabase db push`. Check that it applies all 3 migrations in `supabase/migrations/`, then run the Supabase advisors (Dashboard → Advisors, security and performance) and fix anything they flag.
+2. `npx supabase link --project-ref <ref>` then `npx supabase db push`. Check that it applies all 4 migrations in `supabase/migrations/` (000001_init, 000002_functions, 000003_token_state, 000004_admin), then run the Supabase advisors (Dashboard → Advisors, security and performance) and fix anything they flag.
 3. Run `supabase/seed.sql` once in the Supabase SQL editor.
 4. Create a Cloudflare Turnstile widget whose only hostname is the exact production host (e.g. `<project>.vercel.app`). Use a separate widget (or the test keys) for `localhost`. In production, a token issued for any other hostname is rejected.
 5. Use real (non-test) Turnstile keys in production. The app refuses to start on `VERCEL_ENV=production` with the `1x0000…`/`2x0000…`/`3x0000…` test keys.
@@ -35,11 +35,19 @@ For local dev, Cloudflare Turnstile test keys work (see comments in `.env.exampl
 7. Set the Vercel env vars from `.env.example`. `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are server-only; never expose them to the browser.
 8. Deploy to Vercel. Do not put a Cloudflare proxy (orange cloud) in front of Vercel: the client IP is read from `x-forwarded-for`, which a proxy would replace with its own address. If you add one, switch IP extraction to `cf-connecting-ip` first.
 9. Before announcing, do a real-device run with the production keys: send the link by Instagram DM to an iPhone and an Android phone, open it in the in-app browser, then use "Open in browser", and try back and refresh on the ballot and thank-you pages.
+10. `NEXT_PUBLIC_SITE_URL` must equal the production origin exactly (the vote API checks the request origin against it).
+11. Previews must use a separate Supabase project (or no DB env vars), and Vercel Deployment Protection must stay on.
+12. Keep "Automatically expose System Environment Variables" on in Vercel: the `VERCEL_ENV` checks depend on it.
+13. `ADMIN_PASSWORD` must be 20+ random characters and `ADMIN_SESSION_SECRET` 32+ random bytes. Sessions cannot be revoked one by one; rotating `ADMIN_SESSION_SECRET` logs everyone out.
+14. Upload team logos in `/admin/teams`.
+15. Set the real voting window in `/admin/voting`.
+16. Put the DM link `https://<host>/v` into HeyDM.
+17. When running local browser tests, keep `.playwright-mcp/` (or any test output) outside the project folder: the Next dev server watches it and reloads in a loop.
 
 ### During voting
 
 - Watch the Vercel logs for `[vote] no client IP header`, `turnstile_failed` responses and spikes of 429s. If Indian mobile carriers' CGNAT (many people behind one IP) causes false blocks, raise `RATE_LIMIT_MINT` / `RATE_LIMIT_VOTE` or the per-device cap (`max_votes_per_device_ip`).
-- To pause voting, set `is_enabled = false` in the `voting_config` row (Supabase Table Editor). Set it back to `true` to resume.
+- To pause voting, use the toggle in `/admin/voting`. Toggle it again to resume.
 - Link-preview crawlers (Instagram, WhatsApp) may open `/v` and mint ballot tokens that are never used. That is harmless: tokens expire and do not count as votes.
 
 ### Accepted residual risk
