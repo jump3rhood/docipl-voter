@@ -5,8 +5,9 @@ const VERIFY_URL = 'https://challenges.cloudflare.com/turnstile/v0/siteverify';
 
 /**
  * Fails closed: empty token, network error, timeout or bad JSON all return false.
- * In production the token must also have been issued for SITE_URL's hostname
- * (Cloudflare test keys return a dummy hostname, so the check is skipped elsewhere).
+ * On Vercel production (VERCEL_ENV=production) the token must also have been issued for
+ * SITE_URL's hostname. Previews, `next start` and dev skip it: Cloudflare test keys return
+ * a dummy hostname and preview hosts differ from SITE_URL.
  */
 export async function verifyTurnstile(
   token: string,
@@ -14,7 +15,7 @@ export async function verifyTurnstile(
   fetchImpl: typeof fetch = fetch,
   opts: { production?: boolean } = {},
 ): Promise<boolean> {
-  const production = opts.production ?? process.env.NODE_ENV === 'production';
+  const production = opts.production ?? process.env.VERCEL_ENV === 'production';
   if (!token) return false;
   try {
     const env = getServerEnv();

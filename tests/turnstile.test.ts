@@ -1,4 +1,4 @@
-import { describe, expect, test, vi } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 
 vi.mock('@/lib/env', () => ({ getServerEnv: () => ({ TURNSTILE_SECRET_KEY: 'sekret', SITE_URL: 'https://docipl.vercel.app' }) }));
 
@@ -55,6 +55,17 @@ describe('verifyTurnstile', () => {
     });
     test('production: missing hostname -> false', async () => {
       expect(await verifyTurnstile('tok', null, reply({ success: true }), { production: true })).toBe(false);
+    });
+    afterEach(() => vi.unstubAllEnvs());
+    test('default: enforced when VERCEL_ENV=production', async () => {
+      vi.stubEnv('VERCEL_ENV', 'production');
+      expect(await verifyTurnstile('tok', null, reply({ success: true, hostname: 'example.com' }))).toBe(false);
+      expect(await verifyTurnstile('tok', null, reply({ success: true, hostname: 'docipl.vercel.app' }))).toBe(true);
+    });
+    test('default: skipped on previews even with NODE_ENV=production', async () => {
+      vi.stubEnv('VERCEL_ENV', 'preview');
+      vi.stubEnv('NODE_ENV', 'production');
+      expect(await verifyTurnstile('tok', null, reply({ success: true, hostname: 'example.com' }))).toBe(true);
     });
     test('non-production: dummy hostname accepted', async () => {
       const f = reply({ success: true, hostname: 'example.com' });
