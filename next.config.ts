@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           // frame-ancestors only: a script-src policy would break Turnstile and Next's inline scripts.
           { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
-          { key: "Referrer-Policy", value: "no-referrer" },
+          { key: "Referrer-Policy", value: "same-origin" },
           { key: "X-Content-Type-Options", value: "nosniff" },
         ],
       },

@@ -18,11 +18,11 @@ async function Gate() {
 
 export default function AdminLoginPage() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 bg-navy px-6 py-12 text-center">
+    <div className="flex flex-1 flex-col items-center justify-center gap-6 bg-navy px-6 py-12 text-center">
       <h1 className="text-2xl font-extrabold text-white">Admin</h1>
       <Suspense fallback={null}>
         <Gate />
       </Suspense>
-    </main>
+    </div>
   );
 }

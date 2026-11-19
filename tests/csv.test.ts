@@ -8,6 +8,9 @@ describe('toCsv', () => {
   test('quotes commas, quotes and newlines', () => {
     expect(toCsv(['t'], [['a,b'], ['say "hi"'], ['l1\nl2']])).toBe('t\r\n"a,b"\r\n"say ""hi"""\r\n"l1\nl2"\r\n');
   });
+  test('guards tab and CR prefixed cells', () => {
+    expect(toCsv(['t'], [['\tx'], ['\rx']])).toBe("t\r\n'\tx\r\n\"'\rx\"\r\n");
+  });
   test('guards formula injection', () => {
     expect(toCsv(['t'], [['=1+1'], ['+x'], ['-x'], ['@x']])).toBe("t\r\n'=1+1\r\n'+x\r\n'-x\r\n'@x\r\n");
   });

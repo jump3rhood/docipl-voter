@@ -115,14 +115,18 @@ export async function setTeamLogo(
   const url = bucket.getPublicUrl(path).data.publicUrl;
   const { error } = await db.from('teams').update({ logo_url: url }).eq('id', id).select('id').single();
   if (error) {
-    await bucket.remove([path]);
+    await bucket.remove([path]).catch(() => undefined);
     fail('setTeamLogo', error);
   }
   const marker = `/${LOGO_BUCKET}/`;
   const prev = team.data.logo_url;
   if (prev && prev.includes(marker)) {
-    const oldPath = decodeURIComponent(prev.split(marker)[1].split('?')[0]);
-    await bucket.remove([oldPath]).catch(() => undefined);
+    try {
+      const oldPath = decodeURIComponent(prev.split(marker)[1].split('?')[0]);
+      await bucket.remove([oldPath]);
+    } catch {
+      // Best-effort cleanup: the new logo is already saved.
+    }
   }
   return url;
 }

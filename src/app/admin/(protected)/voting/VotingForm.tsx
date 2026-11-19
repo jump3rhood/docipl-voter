@@ -10,7 +10,6 @@ const inputClass =
 export function VotingForm(props: {
   start: string;
   end: string;
-  enabled: boolean;
   maxVotes: number;
 }) {
   const [state, action, pending] = useActionState(saveVotingAction, undefined);
@@ -24,10 +23,6 @@ export function VotingForm(props: {
         End (IST)
       </label>
       <input id="end" name="end" type="datetime-local" required defaultValue={props.end} className={inputClass} />
-      <label className="flex min-h-14 items-center gap-3 text-lg text-white">
-        <input type="checkbox" name="enabled" defaultChecked={props.enabled} className="size-6" />
-        Voting enabled
-      </label>
       <label htmlFor="maxVotes" className="text-sm font-semibold text-white">
         Max votes per device + network
       </label>

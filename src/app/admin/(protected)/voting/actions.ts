@@ -21,7 +21,6 @@ const istField = (message: string) =>
 const schema = z.object({
   start: istField('Enter a valid start.'),
   end: istField('Enter a valid end.'),
-  enabled: z.boolean(),
   maxVotes: z.coerce
     .number({ error: 'Max votes must be a number.' })
     .int('Max votes must be a whole number.')
@@ -40,15 +39,16 @@ export async function saveVotingAction(_prev: SaveState, formData: FormData): Pr
   const parsed = schema.safeParse({
     start: formData.get('start'),
     end: formData.get('end'),
-    enabled: formData.get('enabled') === 'on',
     maxVotes: formData.get('maxVotes'),
   });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? 'Invalid input.' };
   }
-  const { start, end, enabled, maxVotes } = parsed.data;
+  const { start, end, maxVotes } = parsed.data;
   if (end <= start) return { error: 'End must be after start.' };
   try {
+    // Only the pause/resume toggle changes `enabled`; save keeps the current value.
+    const { enabled } = await getAdminConfig();
     await updateAdminConfig({ start, end, enabled, maxVotesPerDeviceIp: maxVotes });
   } catch (e) {
     if (e instanceof Error && e.message === 'end_before_start') {
@@ -61,9 +61,10 @@ export async function saveVotingAction(_prev: SaveState, formData: FormData): Pr
 }
 
 export async function toggleVotingAction(formData: FormData): Promise<void> {
-  void formData;
   await requireAdmin();
+  const raw = formData.get('enabled');
+  if (raw !== 'true' && raw !== 'false') return;
   const c = await getAdminConfig();
-  await updateAdminConfig({ ...c, enabled: !c.enabled });
+  await updateAdminConfig({ ...c, enabled: raw === 'true' });
   revalidateAll();
 }

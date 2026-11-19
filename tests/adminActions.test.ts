@@ -22,7 +22,7 @@ vi.mock('@/lib/env', () => ({
 }));
 
 import { loginAction } from '@/app/admin/login/actions';
-import { POST as logout } from '@/app/admin/logout/route';
+import { logoutAction } from '@/app/admin/logout/actions';
 import { ADMIN_COOKIE, verifySession } from '@/lib/adminSession';
 
 const form = (password: string) => {
@@ -63,22 +63,9 @@ describe('loginAction', () => {
   });
 });
 
-describe('logout route', () => {
-  test('deletes cookie and 303s to login', async () => {
-    const res = await logout(new Request('http://localhost:3000/admin/logout', { method: 'POST' }));
-    expect(store.delete).toHaveBeenCalledWith(ADMIN_COOKIE);
-    expect(res.status).toBe(303);
-    expect(res.headers.get('location')).toBe('http://localhost:3000/admin/login');
-  });
-
-  test('cross-origin POST does not delete the cookie', async () => {
-    const res = await logout(
-      new Request('http://localhost:3000/admin/logout', {
-        method: 'POST',
-        headers: { origin: 'https://evil.example' },
-      }),
-    );
-    expect(store.delete).not.toHaveBeenCalled();
-    expect(res.status).toBe(303);
+describe('logoutAction', () => {
+  test('deletes cookie with path / and redirects to login', async () => {
+    await expect(logoutAction()).rejects.toThrow('REDIRECT:/admin/login');
+    expect(store.delete).toHaveBeenCalledWith({ name: ADMIN_COOKIE, path: '/' });
   });
 });

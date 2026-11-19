@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { connection } from 'next/server';
 import { requireAdmin } from '@/lib/adminAuth';
+import { logoutAction } from '@/app/admin/logout/actions';
 
 export const metadata: Metadata = { title: 'Admin — Doc IPL', robots: { index: false } };
 
@@ -28,7 +29,7 @@ async function AdminShell({ children }: { children: React.ReactNode }) {
             {l.label}
           </Link>
         ))}
-        <form action="/admin/logout" method="post" className="ml-auto">
+        <form action={logoutAction} className="ml-auto">
           <button
             type="submit"
             className="inline-flex min-h-11 items-center text-white/80 underline"
