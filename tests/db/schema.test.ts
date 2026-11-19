@@ -27,7 +27,8 @@ test('duplicate token_hash rejected', async () => {
 });
 test('anon is locked out', async () => {
   for (const t of ['teams','votes','voters','voting_tokens','voting_config','rate_limits']) {
-    const { data } = await anon.from(t).select('*');
+    const { data, error } = await anon.from(t).select('*');
+    expect(error?.code, t).toBe('42501');
     expect(data ?? []).toHaveLength(0);
   }
 });

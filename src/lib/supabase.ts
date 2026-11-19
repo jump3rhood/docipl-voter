@@ -1,14 +1,16 @@
 import 'server-only';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/lib/database.types';
 import { getServerEnv } from '@/lib/env';
 
-// Untyped until Task 5 generates database.types.ts; add the Database generic then.
-let client: SupabaseClient | undefined;
+export type AdminClient = SupabaseClient<Database>;
 
-export function getSupabaseAdmin(): SupabaseClient {
+let client: AdminClient | undefined;
+
+export function getSupabaseAdmin(): AdminClient {
   if (!client) {
     const env = getServerEnv();
-    client = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    client = createClient<Database>(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
   }
