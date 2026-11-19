@@ -1,8 +1,11 @@
 -- Admin: public logo bucket and guarded destructive functions (service_role only).
 
-insert into storage.buckets (id, name, public)
-values ('team-logos', 'team-logos', true)
-on conflict (id) do nothing;
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('team-logos', 'team-logos', true, 1048576, array['image/png', 'image/jpeg', 'image/webp'])
+on conflict (id) do update
+  set public = true,
+      file_size_limit = 1048576,
+      allowed_mime_types = array['image/png', 'image/jpeg', 'image/webp'];
 
 -- 'ok' | 'refused' (refused while voting is enabled)
 create or replace function public.admin_reset_votes()
@@ -14,7 +17,7 @@ as $$
 declare
   v_enabled boolean;
 begin
-  select vc.is_enabled into v_enabled from public.voting_config vc where vc.id = 1;
+  select vc.is_enabled into v_enabled from public.voting_config vc where vc.id = 1 for update;
   if coalesce(v_enabled, false) then
     return 'refused';
   end if;

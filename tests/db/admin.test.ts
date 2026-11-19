@@ -2,6 +2,7 @@ import { afterAll, beforeEach, expect, test } from 'vitest';
 import { admin, openWindow, resetData, teamId } from './helpers';
 import {
   createTeam,
+  exportVotesCsvRows,
   getAdminConfig,
   listAllTeams,
   purgeIdentifiers,
@@ -101,6 +102,27 @@ test('setTeamLogo uploads to team-logos and sets logo_url', async () => {
   expect(res.status).toBe(200);
   const path = url.split('/team-logos/')[1];
   await admin.storage.from('team-logos').remove([path]);
+});
+
+test('setTeamLogo rejects bad type and oversize, ignores caller slug', async () => {
+  await createTeam({ name: 'L2', slug: 'zz-l2', accentColor: null, displayOrder: 96 });
+  const t = (await listAllTeams()).find((x) => x.slug === 'zz-l2')!;
+  await expect(setTeamLogo(t.id, { bytes: new ArrayBuffer(4), type: 'image/svg+xml', slug: 'zz-l2' })).rejects.toThrow('unsupported_type');
+  await expect(setTeamLogo(t.id, { bytes: new ArrayBuffer(1024 * 1024 + 1), type: 'image/png', slug: 'zz-l2' })).rejects.toThrow('too_large');
+  const png = Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'));
+  const url = await setTeamLogo(t.id, { bytes: png.buffer as ArrayBuffer, type: 'image/png', slug: '../evil' });
+  expect(url).toContain('/team-logos/zz-l2-');
+  await admin.storage.from('team-logos').remove([url.split('/team-logos/')[1]]);
+});
+
+test('exportVotesCsvRows returns all rows beyond 1000', async () => {
+  const team = await teamId((await listAllTeams())[0].slug);
+  const rows = Array.from({ length: 1050 }, () => ({ team_id: team }));
+  for (let i = 0; i < rows.length; i += 500) {
+    const { error } = await admin.from('votes').insert(rows.slice(i, i + 500));
+    expect(error).toBeNull();
+  }
+  expect(await exportVotesCsvRows()).toHaveLength(1050);
 });
 
 afterAll(async () => {
