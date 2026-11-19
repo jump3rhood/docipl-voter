@@ -5,7 +5,9 @@ beforeEach(resetData);
 
 test('11 seeded active teams in order', async () => {
   const { data } = await admin.from('teams').select('slug,display_order,is_active').order('display_order');
-  expect(data!.map(t => t.slug)).toEqual(Array.from({ length: 11 }, (_, i) => `team-${i + 1}`));
+  expect(data!.map(t => t.slug)).toEqual([
+    'smash-squad', 'jager-shots', 'code-red', 'the-rush', 'dink-n-drive', 'spin-mavericks', 'code-blue', 'white-coat-warriors', 'the-pacemakers', 'vdc-spartans', 'dinking-dragons',
+  ]);
   expect(data!.every(t => t.is_active)).toBe(true);
 });
 test('voting_config is a single disabled row', async () => {
