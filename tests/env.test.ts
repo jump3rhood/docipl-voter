@@ -42,4 +42,33 @@ describe('parseServerEnv', () => {
   test('short HASH_SECRET rejected', () => {
     expect(() => parseServerEnv({ ...valid, HASH_SECRET: 'short' })).toThrow(/HASH_SECRET/);
   });
+  describe('Turnstile test keys on Vercel production', () => {
+    const real = {
+      ...valid,
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: '0x4AAAAAAAreal-site-key',
+      TURNSTILE_SECRET_KEY: '0x4AAAAAAAreal-secret-key',
+    };
+    test('real keys accepted in production', () => {
+      expect(parseServerEnv({ ...real, VERCEL_ENV: 'production' }).TURNSTILE_SITE_KEY)
+        .toBe('0x4AAAAAAAreal-site-key');
+    });
+    test.each(['1x0000000000000000000000000000000AA', '2x0000000000000000000000000000000AA', '3x0000000000000000000000000000000AA'])(
+      'test secret %s rejected in production',
+      (key) => {
+        expect(() => parseServerEnv({ ...real, TURNSTILE_SECRET_KEY: key, VERCEL_ENV: 'production' }))
+          .toThrow(/TURNSTILE_SECRET_KEY/);
+      },
+    );
+    test.each(['1x00000000000000000000AA', '2x00000000000000000000AB', '3x00000000000000000000FF'])(
+      'test site key %s rejected in production',
+      (key) => {
+        expect(() => parseServerEnv({ ...real, NEXT_PUBLIC_TURNSTILE_SITE_KEY: key, VERCEL_ENV: 'production' }))
+          .toThrow(/NEXT_PUBLIC_TURNSTILE_SITE_KEY/);
+      },
+    );
+    test('test keys allowed in preview and locally', () => {
+      expect(() => parseServerEnv({ ...valid, VERCEL_ENV: 'preview' })).not.toThrow();
+      expect(() => parseServerEnv(valid)).not.toThrow();
+    });
+  });
 });

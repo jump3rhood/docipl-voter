@@ -1,6 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 
-vi.mock('@/lib/env', () => ({ getServerEnv: () => ({ TURNSTILE_SECRET_KEY: 'sekret' }) }));
+vi.mock('@/lib/env', () => ({ getServerEnv: () => ({ TURNSTILE_SECRET_KEY: 'sekret', SITE_URL: 'https://docipl.vercel.app' }) }));
 
 import { verifyTurnstile } from '@/lib/turnstile';
 
@@ -43,5 +43,22 @@ describe('verifyTurnstile', () => {
       throw new Error('boom');
     }) as unknown as typeof fetch;
     expect(await verifyTurnstile('tok', null, f)).toBe(false);
+  });
+  describe('hostname check', () => {
+    test('production: matching hostname -> true', async () => {
+      const f = reply({ success: true, hostname: 'docipl.vercel.app' });
+      expect(await verifyTurnstile('tok', null, f, { production: true })).toBe(true);
+    });
+    test('production: other hostname -> false', async () => {
+      const f = reply({ success: true, hostname: 'example.com' });
+      expect(await verifyTurnstile('tok', null, f, { production: true })).toBe(false);
+    });
+    test('production: missing hostname -> false', async () => {
+      expect(await verifyTurnstile('tok', null, reply({ success: true }), { production: true })).toBe(false);
+    });
+    test('non-production: dummy hostname accepted', async () => {
+      const f = reply({ success: true, hostname: 'example.com' });
+      expect(await verifyTurnstile('tok', null, f, { production: false })).toBe(true);
+    });
   });
 });

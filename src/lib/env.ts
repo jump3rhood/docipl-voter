@@ -50,6 +50,9 @@ const schema = z.object({
   RATE_LIMIT_ADMIN_LOGIN: rateLimit('10/900'),
 });
 
+// Cloudflare's always-pass/always-fail/challenge test keys; never valid on production.
+const TURNSTILE_TEST_KEY = /^[123]x0000/;
+
 export function parseServerEnv(source: Record<string, string | undefined>): ServerEnv {
   const result = schema.safeParse(source);
   if (!result.success) {
@@ -57,6 +60,14 @@ export function parseServerEnv(source: Record<string, string | undefined>): Serv
     throw new Error(`Invalid or missing environment variables: ${names.join(', ')}`);
   }
   const d = result.data;
+  if (source.VERCEL_ENV === 'production') {
+    const testKeys = (['NEXT_PUBLIC_TURNSTILE_SITE_KEY', 'TURNSTILE_SECRET_KEY'] as const).filter(
+      (name) => TURNSTILE_TEST_KEY.test(d[name]),
+    );
+    if (testKeys.length > 0) {
+      throw new Error(`Turnstile test keys are not allowed in production: ${testKeys.join(', ')}`);
+    }
+  }
   return {
     SITE_URL: d.NEXT_PUBLIC_SITE_URL,
     SUPABASE_URL: d.SUPABASE_URL,

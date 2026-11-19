@@ -7,7 +7,7 @@ vi.mock('@/lib/turnstile', () => ({
 
 import { GET } from '@/app/v/route';
 import { POST } from '@/app/api/vote/route';
-import { hashToken } from '@/lib/identity';
+import { hashId, hashToken } from '@/lib/identity';
 import { randomToken } from '@/lib/crypto';
 import { getTokenState } from '@/lib/votes';
 import { admin, openWindow, resetData, teamId } from './helpers';
@@ -33,13 +33,21 @@ async function mintFor(cookie?: string): Promise<{ token: string; cookie: string
 
 async function post(
   body: unknown,
-  opts: { cookie?: string; ip?: string; raw?: boolean } = {},
+  opts: {
+    cookie?: string;
+    ip?: string;
+    raw?: boolean;
+    contentType?: string | null;
+    origin?: string;
+  } = {},
 ): Promise<Response> {
   const headers: Record<string, string> = {
-    'content-type': 'application/json',
     'x-forwarded-for': opts.ip ?? fakeIp(),
     'user-agent': 'vitest',
   };
+  const contentType = opts.contentType === undefined ? 'application/json' : opts.contentType;
+  if (contentType !== null) headers['content-type'] = contentType;
+  if (opts.origin) headers.origin = opts.origin;
   if (opts.cookie) headers.cookie = `dipl_vid=${opts.cookie}`;
   return POST(
     new NextRequest('http://localhost:3000/api/vote', {
@@ -52,6 +60,14 @@ async function post(
 
 function ballot(token: string, team: string, extra: Record<string, unknown> = {}) {
   return { token, teamId: team, turnstileToken: 'pass', deviceSignal: null, ...extra };
+}
+
+const DEV_1 = 'a'.repeat(64);
+const DEV_2 = 'b'.repeat(64);
+
+async function clearRateLimits(): Promise<void> {
+  const { error } = await admin.from('rate_limits').delete().neq('bucket', '');
+  if (error) throw new Error(error.message);
 }
 
 beforeEach(resetData);
@@ -209,16 +225,79 @@ describe('POST /api/vote', () => {
     const ip = fakeIp();
     const a = await mintFor();
     const b = await mintFor();
-    const r1 = await post(ballot(a.token, team, { deviceSignal: 'dev-1' }), {
+    const c = await mintFor();
+    const r1 = await post(ballot(a.token, team, { deviceSignal: DEV_1 }), {
       cookie: a.cookie,
       ip,
     });
     expect(r1.status).toBe(200);
-    const r2 = await post(ballot(b.token, team, { deviceSignal: 'dev-1' }), {
+    const r2 = await post(ballot(b.token, team, { deviceSignal: DEV_1 }), {
       cookie: b.cookie,
       ip,
     });
     expect(r2.status).toBe(409);
     expect(await r2.json()).toEqual({ ok: false, code: 'already_voted' });
+    // Negative control: same IP, different device -> its own bucket. Clear the per-IP
+    // vote rate limit (2/600 in tests) so this isolates the device cap.
+    await clearRateLimits();
+    const r3 = await post(ballot(c.token, team, { deviceSignal: DEV_2 }), {
+      cookie: c.cookie,
+      ip,
+    });
+    expect(r3.status).toBe(200);
+  });
+
+  test('api: non-JSON content-type -> 415 token_invalid, token untouched', async () => {
+    await openWindow();
+    const { token, cookie } = await mintFor();
+    const team = await teamId('code-red');
+    for (const contentType of ['text/plain', 'application/x-www-form-urlencoded', null]) {
+      const res = await post(ballot(token, team), { cookie, contentType });
+      expect(res.status).toBe(415);
+      expect(await res.json()).toEqual({ ok: false, code: 'token_invalid' });
+    }
+    const ok = await post(ballot(token, team), {
+      cookie,
+      contentType: 'application/json; charset=utf-8',
+    });
+    expect(ok.status).toBe(200);
+  });
+
+  test('api: foreign Origin -> 403 token_invalid; same origin ok', async () => {
+    await openWindow();
+    const { token, cookie } = await mintFor();
+    const team = await teamId('code-red');
+    for (const origin of ['https://evil.example', 'http://localhost:3001', 'null']) {
+      const res = await post(ballot(token, team), { cookie, origin });
+      expect(res.status).toBe(403);
+      expect(await res.json()).toEqual({ ok: false, code: 'token_invalid' });
+    }
+    expect(await getTokenState(hashToken(token))).toBe('active');
+    const ok = await post(ballot(token, team), { cookie, origin: 'http://localhost:3000' });
+    expect(ok.status).toBe(200);
+  });
+
+  test('api: bogus deviceSignal still votes, stored in the none bucket', async () => {
+    await openWindow();
+    const { token, cookie } = await mintFor();
+    const res = await post(ballot(token, await teamId('code-red'), { deviceSignal: 'not-hex' }), {
+      cookie,
+    });
+    expect(res.status).toBe(200);
+    const { data, error } = await admin.from('votes').select('device_hash');
+    if (error) throw new Error(error.message);
+    expect(data).toEqual([{ device_hash: 'none' }]);
+  });
+
+  test('api: valid deviceSignal stored hashed', async () => {
+    await openWindow();
+    const { token, cookie } = await mintFor();
+    const res = await post(ballot(token, await teamId('code-red'), { deviceSignal: DEV_1 }), {
+      cookie,
+    });
+    expect(res.status).toBe(200);
+    const { data, error } = await admin.from('votes').select('device_hash');
+    if (error) throw new Error(error.message);
+    expect(data).toEqual([{ device_hash: hashId(DEV_1) }]);
   });
 });

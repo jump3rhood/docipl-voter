@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
-import { getClientIp } from '@/lib/clientIp';
+import { getClientIp, ipKey } from '@/lib/clientIp';
 import { randomToken } from '@/lib/crypto';
+import { getServerEnv } from '@/lib/env';
 import { hashId, hashToken } from '@/lib/identity';
 import { verifyTurnstile } from '@/lib/turnstile';
 import type { VoteErrorCode } from '@/lib/voteMessages';
@@ -11,12 +12,17 @@ import { castVote, rateLimitHit, type CastStatus } from '@/lib/votes';
 
 const MAX_BODY_CHARS = 8192;
 const DAY_MS = 86_400_000;
+const DEVICE_SIGNAL = /^[0-9a-f]{64}$/;
 
 const BodySchema = z.object({
   token: z.string().min(20).max(200),
   teamId: z.guid(),
   turnstileToken: z.string().max(4096),
-  deviceSignal: z.string().max(256).nullable(),
+  // Only a SHA-256 hex digest (what collectDeviceSignal sends) counts; anything else is
+  // treated as "no signal" (the shared 'none' bucket) rather than rejecting the vote.
+  deviceSignal: z
+    .unknown()
+    .transform((v) => (typeof v === 'string' && DEVICE_SIGNAL.test(v) ? v : null)),
 });
 
 const ERROR_STATUS: Record<Exclude<CastStatus, 'ok'>, { status: number; code: VoteErrorCode }> = {
@@ -66,13 +72,21 @@ async function cookieEnd(): Promise<Date> {
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
+    if (!req.headers.get('content-type')?.toLowerCase().startsWith('application/json')) {
+      return fail(415, 'token_invalid');
+    }
+    const origin = req.headers.get('origin');
+    if (origin !== null && origin !== new URL(getServerEnv().SITE_URL).origin) {
+      return fail(403, 'token_invalid');
+    }
+
     const body = await parseBody(req);
     if (!body.ok) return fail(400, body.code);
     const { token, teamId, turnstileToken, deviceSignal } = body.data;
 
     const ip = getClientIp(req.headers);
     if (!ip) console.warn('[vote] no client IP header');
-    const ipHash = hashId(ip ?? 'unknown');
+    const ipHash = hashId(ipKey(ip ?? 'unknown'));
     if (!(await rateLimitHit('vote', ipHash))) return fail(429, 'rate_limited');
 
     if (!(await verifyTurnstile(turnstileToken, ip))) return fail(403, 'turnstile_failed');

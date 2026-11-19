@@ -1,5 +1,11 @@
 import { NextRequest } from 'next/server';
-import { beforeEach, describe, expect, test } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
+
+vi.mock('@/lib/votes', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/votes')>();
+  return { ...actual, mintToken: vi.fn(actual.mintToken) };
+});
+
 import { GET } from '@/app/v/route';
 import { hashId, hashToken } from '@/lib/identity';
 import { castVote, getTokenState, mintToken } from '@/lib/votes';
@@ -88,5 +94,29 @@ describe('GET /v', () => {
     const res = await GET(req({ ip }));
     expect(res.status).toBe(303);
     expect(new URL(res.headers.get('location')!).pathname).toBe('/slow-down');
+  });
+
+  test('unexpected error -> / and logged without details', async () => {
+    await openWindow();
+    vi.mocked(mintToken).mockRejectedValueOnce(new Error('db down'));
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const res = await GET(req());
+      expect(res.status).toBe(303);
+      expect(new URL(res.headers.get('location')!).pathname).toBe('/');
+      expect(err).toHaveBeenCalledWith('[v] mint failed', 'db down');
+    } finally {
+      err.mockRestore();
+    }
+  });
+
+  test('IPv6 addresses in one /64 share a rate-limit bucket', async () => {
+    await openWindow();
+    await GET(req({ ip: '2001:db8:abcd:12:1::5' }));
+    await GET(req({ ip: '2001:db8:abcd:12:2::9' }));
+    const res = await GET(req({ ip: '2001:db8:abcd:12:ffff::1' }));
+    expect(new URL(res.headers.get('location')!).pathname).toBe('/slow-down');
+    const other = await GET(req({ ip: '2001:db8:abcd:13::1' }));
+    expect(new URL(other.headers.get('location')!).pathname).toMatch(/^\/vote\//);
   });
 });

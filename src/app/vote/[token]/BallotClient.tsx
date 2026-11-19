@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import type { Team } from '@/lib/voting';
 import { BallotForm } from '@/components/BallotForm';
 import { TurnstileWidget } from '@/components/TurnstileWidget';
+import { VerifyNotice } from '@/components/VerifyNotice';
 import { collectDeviceSignal } from '@/lib/deviceSignal';
 import { postVote } from '@/lib/submitVote';
 
@@ -20,6 +21,7 @@ export function BallotClient({
   const router = useRouter();
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
+  const [verifyStuck, setVerifyStuck] = useState(false);
   const deviceSignal = useRef<Promise<string | null> | null>(null);
 
   return (
@@ -27,7 +29,20 @@ export function BallotClient({
       teams={teams}
       canSubmit={turnstileToken !== null}
       footerExtra={
-        <TurnstileWidget siteKey={siteKey} onToken={setTurnstileToken} resetSignal={resetSignal} />
+        <>
+          <TurnstileWidget
+            siteKey={siteKey}
+            onToken={(t) => {
+              setTurnstileToken(t);
+              if (t) setVerifyStuck(false);
+            }}
+            onError={() => setVerifyStuck(true)}
+            resetSignal={resetSignal}
+          />
+          {verifyStuck && turnstileToken === null && (
+            <VerifyNotice onReload={() => window.location.reload()} />
+          )}
+        </>
       }
       submit={async (teamId) => {
         deviceSignal.current ??= collectDeviceSignal();
