@@ -5,10 +5,20 @@ vi.mock('@/lib/turnstile', () => ({
   verifyTurnstile: vi.fn(async (t: string) => t === 'pass'),
 }));
 
+const envMock = vi.hoisted(() => ({ siteUrl: 'https://docipl.example' }));
+vi.mock('@/lib/env', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/env')>();
+  return {
+    ...actual,
+    getServerEnv: () => ({ ...actual.getServerEnv(), SITE_URL: envMock.siteUrl }),
+  };
+});
+
 import { GET } from '@/app/v/route';
 import { POST } from '@/app/api/vote/route';
 import { hashId, hashToken } from '@/lib/identity';
 import { randomToken } from '@/lib/crypto';
+import * as votes from '@/lib/votes';
 import { getTokenState } from '@/lib/votes';
 import { admin, openWindow, resetData, teamId } from './helpers';
 
@@ -275,6 +285,93 @@ describe('POST /api/vote', () => {
     expect(await getTokenState(hashToken(token))).toBe('active');
     const ok = await post(ballot(token, team), { cookie, origin: 'http://localhost:3000' });
     expect(ok.status).toBe(200);
+  });
+
+  test('api: origin check uses request origin off production', async () => {
+    vi.stubEnv('VERCEL_ENV', '');
+    try {
+      await openWindow();
+      const { token, cookie } = await mintFor();
+      // SITE_URL (mocked) is https://docipl.example; the request host is localhost:3000.
+      const res = await post(ballot(token, await teamId('code-red')), {
+        cookie,
+        origin: 'http://localhost:3000',
+      });
+      expect(res.status).toBe(200);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  test('api: production origin must match SITE_URL', async () => {
+    vi.stubEnv('VERCEL_ENV', 'production');
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      await openWindow();
+      const { token, cookie } = await mintFor();
+      const team = await teamId('code-red');
+      const foreign = await post(ballot(token, team), { cookie, origin: 'https://evil.example' });
+      expect(foreign.status).toBe(403);
+      // The request's own origin is not enough in production.
+      const own = await post(ballot(token, team), { cookie, origin: 'http://localhost:3000' });
+      expect(own.status).toBe(403);
+      const good = await post(ballot(token, team), { cookie, origin: 'https://docipl.example' });
+      expect(good.status).toBe(200);
+      expect(warn).toHaveBeenCalledWith('[vote] rejected: origin');
+      expect(warn.mock.calls.flat().join(' ')).not.toContain('evil.example');
+    } finally {
+      warn.mockRestore();
+      vi.unstubAllEnvs();
+    }
+  });
+
+  test('api: content-type rejection is logged', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const res = await post({}, { contentType: 'text/plain' });
+      expect(res.status).toBe(415);
+      expect(warn).toHaveBeenCalledWith('[vote] rejected: content-type');
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  test('api: content-length too large -> 400 token_invalid', async () => {
+    await openWindow();
+    const { token, cookie } = await mintFor();
+    const req = new NextRequest('http://localhost:3000/api/vote', {
+      method: 'POST',
+      headers: {
+        'x-forwarded-for': fakeIp(),
+        'content-type': 'application/json',
+        'content-length': '9000',
+        cookie: `dipl_vid=${cookie}`,
+      },
+      body: JSON.stringify(ballot(token, await teamId('code-red'))),
+    });
+    const textSpy = vi.spyOn(req, 'text');
+    const res = await POST(req);
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ ok: false, code: 'token_invalid' });
+    expect(textSpy).not.toHaveBeenCalled();
+    expect(await getTokenState(hashToken(token))).toBe('active');
+  });
+
+  test('api: ok with null teamName -> 500 network', async () => {
+    await openWindow();
+    const { token, cookie } = await mintFor();
+    const spy = vi
+      .spyOn(votes, 'castVote')
+      .mockResolvedValueOnce({ status: 'ok', teamName: null });
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const res = await post(ballot(token, await teamId('code-red')), { cookie });
+      expect(res.status).toBe(500);
+      expect(await res.json()).toEqual({ ok: false, code: 'network' });
+    } finally {
+      spy.mockRestore();
+      err.mockRestore();
+    }
   });
 
   test('api: bogus deviceSignal still votes, stored in the none bucket', async () => {

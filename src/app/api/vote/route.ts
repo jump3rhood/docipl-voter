@@ -73,12 +73,21 @@ async function cookieEnd(): Promise<Date> {
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
     if (!req.headers.get('content-type')?.toLowerCase().startsWith('application/json')) {
+      console.warn('[vote] rejected: content-type');
       return fail(415, 'token_invalid');
     }
+    // Production pins the canonical site; previews and local runs use their own host.
     const origin = req.headers.get('origin');
-    if (origin !== null && origin !== new URL(getServerEnv().SITE_URL).origin) {
+    const expectedOrigin =
+      process.env.VERCEL_ENV === 'production'
+        ? new URL(getServerEnv().SITE_URL).origin
+        : req.nextUrl.origin;
+    if (origin !== null && origin !== expectedOrigin) {
+      console.warn('[vote] rejected: origin');
       return fail(403, 'token_invalid');
     }
+    const declaredLength = Number(req.headers.get('content-length'));
+    if (declaredLength > MAX_BODY_CHARS) return fail(400, 'token_invalid');
 
     const body = await parseBody(req);
     if (!body.ok) return fail(400, body.code);
