@@ -57,4 +57,14 @@ describe('TurnstileWidget watchdog', () => {
     });
     expect(onError).toHaveBeenCalledWith('timeout');
   });
+
+  it('does not restart the watchdog after interaction while a token is held', () => {
+    const onError = mount();
+    act(() => {
+      (opts.callback as (t: string) => void)('t');
+      (opts['after-interactive-callback'] as () => void)();
+      vi.advanceTimersByTime(13_000);
+    });
+    expect(onError).not.toHaveBeenCalled();
+  });
 });

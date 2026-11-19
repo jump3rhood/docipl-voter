@@ -57,6 +57,7 @@ export function TurnstileWidget({
   const lastReset = useRef(resetSignal);
   const watchdog = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const retried = useRef(false);
+  const hasTokenRef = useRef(false);
   const resetWidget = useRef<() => void>(() => {});
 
   useEffect(() => {
@@ -74,6 +75,7 @@ export function TurnstileWidget({
       watchdog.current = undefined;
     };
     const safeReset = () => {
+      hasTokenRef.current = false;
       try {
         if (widgetId.current !== null) window.turnstile?.reset(widgetId.current);
       } catch {
@@ -106,17 +108,23 @@ export function TurnstileWidget({
             'refresh-expired': 'auto',
             // A visible challenge is the user's time, not a stall: pause the watchdog.
             'before-interactive-callback': stopWatchdog,
-            'after-interactive-callback': startWatchdog,
+            // ...but a challenge that ended with a token held needs no watchdog.
+            'after-interactive-callback': () => {
+              if (!hasTokenRef.current) startWatchdog();
+            },
             callback: (t: string) => {
               stopWatchdog();
+              hasTokenRef.current = true;
               retried.current = false;
               onTokenRef.current(t);
             },
             'expired-callback': () => {
+              hasTokenRef.current = false;
               onTokenRef.current(null);
               startWatchdog();
             },
             'error-callback': () => {
+              hasTokenRef.current = false;
               onTokenRef.current(null);
               fail('error');
               return true;
@@ -145,6 +153,7 @@ export function TurnstileWidget({
         // Ignore: the container is being torn down anyway.
       }
       widgetId.current = null;
+      hasTokenRef.current = false;
     };
   }, [siteKey]);
 
