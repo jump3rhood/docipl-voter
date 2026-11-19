@@ -45,8 +45,8 @@ create table public.voters (
 create table public.votes (
   id uuid primary key default gen_random_uuid(),
   team_id uuid not null references public.teams(id) on delete restrict,
-  voter_id uuid not null unique references public.voters(id),
-  token_id uuid not null unique references public.voting_tokens(id),
+  voter_id uuid unique references public.voters(id) on delete set null,
+  token_id uuid unique references public.voting_tokens(id) on delete set null,
   device_hash text,
   ip_hash text,
   user_agent_hash text,

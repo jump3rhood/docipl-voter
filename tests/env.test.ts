@@ -32,6 +32,10 @@ describe('parseServerEnv', () => {
   test('rejects malformed rate limit', () => {
     expect(() => parseServerEnv({ ...valid, RATE_LIMIT_VOTE: 'lots' })).toThrow(/RATE_LIMIT_VOTE/);
   });
+  test('rejects rate limit window over one hour', () => {
+    expect(() => parseServerEnv({ ...valid, RATE_LIMIT_VOTE: '5/7200' })).toThrow(/RATE_LIMIT_VOTE/);
+    expect(parseServerEnv({ ...valid, RATE_LIMIT_VOTE: '5/3600' }).rateLimits.vote.windowSeconds).toBe(3600);
+  });
   test('lists all missing vars', () => {
     expect(() => parseServerEnv({})).toThrow(/SUPABASE_URL[\s\S]*HASH_SECRET/);
   });

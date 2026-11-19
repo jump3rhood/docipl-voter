@@ -67,14 +67,14 @@ export type Database = {
                   ]
                 },"votes": {
                   Row: {
-                    "created_at": string | null,"device_hash": string | null,"id": string,"ip_hash": string | null,"team_id": string,"token_id": string,"user_agent_hash": string | null,"voter_id": string
+                    "created_at": string | null,"device_hash": string | null,"id": string,"ip_hash": string | null,"team_id": string,"token_id": string | null,"user_agent_hash": string | null,"voter_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string | null,"device_hash"?: string | null,"id"?: string,"ip_hash"?: string | null,"team_id": string,"token_id": string,"user_agent_hash"?: string | null,"voter_id": string
+                    "created_at"?: string | null,"device_hash"?: string | null,"id"?: string,"ip_hash"?: string | null,"team_id": string,"token_id"?: string | null,"user_agent_hash"?: string | null,"voter_id"?: string | null
                   }
                   Update: {
-                    "created_at"?: string | null,"device_hash"?: string | null,"id"?: string,"ip_hash"?: string | null,"team_id"?: string,"token_id"?: string,"user_agent_hash"?: string | null,"voter_id"?: string
+                    "created_at"?: string | null,"device_hash"?: string | null,"id"?: string,"ip_hash"?: string | null,"team_id"?: string,"token_id"?: string | null,"user_agent_hash"?: string | null,"voter_id"?: string | null
                   }
                   Relationships: [
                     {

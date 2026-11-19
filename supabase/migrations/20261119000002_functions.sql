@@ -83,6 +83,8 @@ declare
   v_voter_id uuid;
   v_cap int;
   v_count int;
+  v_device text := coalesce(nullif(p_device_hash, ''), 'none');
+  v_ip text := coalesce(nullif(p_ip_hash, ''), 'none');
 begin
   -- 1. Voting window.
   v_state := public.voting_state();
@@ -143,11 +145,13 @@ begin
   -- 6. Per (device, ip) cap; 0 disables. Advisory lock makes the count-then-insert exact
   --    under concurrency for the same (device, ip).
   select vc.max_votes_per_device_ip into v_cap from public.voting_config vc where vc.id = 1;
-  if coalesce(v_cap, 0) > 0 and p_device_hash is not null and p_ip_hash is not null then
-    perform pg_advisory_xact_lock(hashtextextended('cast_vote:' || p_device_hash || ':' || p_ip_hash, 0));
+  --    Missing/empty device or ip hashes are coalesced to 'none' (and stored that way), so
+  --    clients that send no signal share one bucket instead of bypassing the cap.
+  if coalesce(v_cap, 0) > 0 then
+    perform pg_advisory_xact_lock(hashtextextended('cast_vote:' || v_device || ':' || v_ip, 0));
     select count(*) into v_count
     from public.votes v
-    where v.device_hash = p_device_hash and v.ip_hash = p_ip_hash;
+    where v.device_hash = v_device and v.ip_hash = v_ip;
     if v_count >= v_cap then
       return query select 'already_voted'::text, null::uuid, null::text;
       return;
@@ -157,7 +161,7 @@ begin
   -- 7. Record vote and consume token.
   begin
     insert into public.votes (team_id, voter_id, token_id, device_hash, ip_hash, user_agent_hash)
-    values (v_team.id, v_voter_id, v_token.id, p_device_hash, p_ip_hash, p_user_agent_hash);
+    values (v_team.id, v_voter_id, v_token.id, v_device, v_ip, p_user_agent_hash);
 
     update public.voting_tokens vt
     set status = 'used', used_at = now()
@@ -206,6 +210,11 @@ declare
   v_window timestamptz;
   v_count int;
 begin
+  -- Invalid parameters raise (rather than return false) so misconfiguration fails loudly.
+  if p_window_seconds is null or p_window_seconds <= 0 or p_max is null or p_max < 0 then
+    raise exception 'invalid rate limit parameters: window_seconds=%, max=%', p_window_seconds, p_max;
+  end if;
+
   v_window := to_timestamp(floor(extract(epoch from now()) / p_window_seconds) * p_window_seconds);
 
   insert into public.rate_limits as rl (bucket, key_hash, window_start, count)

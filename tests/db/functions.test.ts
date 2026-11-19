@@ -163,15 +163,21 @@ test('device+ip cap 3', async () => {
   expect((await vote(await mint(), 'team-1', 'b5', 'd1', 'i2')).status).toBe('ok');
 });
 
-test('null device hash skips cap check', async () => {
-  await openWindow();
-  for (const b of ['b1', 'b2', 'b3', 'b4']) {
-    const { data } = await admin.rpc('cast_vote', {
+test('null device/ip hash share one sentinel cap bucket', async () => {
+  await openWindow({ maxPerDeviceIp: 3 });
+  const castNull = async (b: string) => {
+    const { data, error } = await admin.rpc('cast_vote', {
       p_token_hash: await mint(), p_team_id: await teamId('team-1'),
       p_browser_id_hash: b, p_device_hash: null, p_ip_hash: 'i1', p_user_agent_hash: 'ua',
     } as never);
-    expect((data as VoteRow[])[0].status).toBe('ok');
-  }
+    if (error) throw new Error(error.message);
+    return (data as VoteRow[])[0].status;
+  };
+  for (const b of ['b1', 'b2', 'b3']) expect(await castNull(b)).toBe('ok');
+  expect(await castNull('b4')).toBe('already_voted');
+  const { data } = await admin.from('votes').select('device_hash,ip_hash');
+  expect(data).toHaveLength(3);
+  expect(data!.every(r => r.device_hash === 'none' && r.ip_hash === 'i1')).toBe(true);
 });
 
 test('cap 0 disables device check', async () => {
@@ -220,6 +226,31 @@ test('cast_vote concurrency: same browser, different tokens', async () => {
   expect((await admin.from('voters').select('id')).data).toHaveLength(1);
 });
 
+test('cast_vote concurrency: device+ip cap of 1 across distinct browsers', async () => {
+  await openWindow({ maxPerDeviceIp: 1 });
+  const toks = await Promise.all([1, 2, 3, 4].map(() => mint()));
+  const rs = await Promise.all(toks.map((t, i) => vote(t, 'team-1', `bcap${i}`, 'dsame', 'isame')));
+  expect(rs.filter(r => r.status === 'ok')).toHaveLength(1);
+  expect(rs.filter(r => r.status === 'already_voted')).toHaveLength(3);
+  expect((await admin.from('votes').select('id')).data).toHaveLength(1);
+});
+
+test('purge: voters and tokens can be deleted; vote row keeps team and timestamp', async () => {
+  await openWindow(); await mint('tp');
+  expect((await vote('tp', 'team-2', 'bp')).status).toBe('ok');
+  expect((await admin.from('voters').delete().neq('id', '00000000-0000-0000-0000-000000000000')).error).toBeNull();
+  expect((await admin.from('voting_tokens').delete().neq('id', '00000000-0000-0000-0000-000000000000')).error).toBeNull();
+  const { data } = await admin.from('votes').select('team_id,created_at,voter_id,token_id');
+  expect(data).toHaveLength(1);
+  expect(data![0].team_id).toBe(await teamId('team-2'));
+  expect(data![0].created_at).toBeTruthy();
+  expect(data![0].voter_id).toBeNull();
+  expect(data![0].token_id).toBeNull();
+  // A fresh voter is not blocked by orphaned (null voter_id) votes.
+  await mint('tp2');
+  expect((await vote('tp2', 'team-1', 'bp2', 'd9', 'i9')).status).toBe('ok');
+});
+
 test('get_voter_vote', async () => {
   await openWindow(); await mint('t1');
   await vote('t1', 'team-3', 'b1');
@@ -234,6 +265,13 @@ test('rate_limit_hit', async () => {
   expect([(await hit()).data, (await hit()).data, (await hit()).data]).toEqual([true, true, false]);
   const other = await admin.rpc('rate_limit_hit', { p_bucket: 'x', p_key_hash: 'k2', p_window_seconds: 600, p_max: 2 } as never);
   expect(other.data).toBe(true);
+});
+
+test('rate_limit_hit rejects invalid window or max', async () => {
+  for (const args of [{ p_window_seconds: 0, p_max: 1 }, { p_window_seconds: -5, p_max: 1 }, { p_window_seconds: 60, p_max: -1 }]) {
+    const { error } = await admin.rpc('rate_limit_hit', { p_bucket: 'x', p_key_hash: 'k', ...args } as never);
+    expect(error?.message).toMatch(/invalid rate limit/);
+  }
 });
 
 test('get_results ranks, percents, includes zero-vote teams, excludes inactive', async () => {

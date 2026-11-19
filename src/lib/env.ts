@@ -1,3 +1,4 @@
+import 'server-only';
 import { z } from 'zod';
 
 export type RateLimit = { max: number; windowSeconds: number };
@@ -28,6 +29,7 @@ const rateLimit = (fallback: string) =>
     .pipe(
       z.string().regex(/^[1-9]\d*\/[1-9]\d*$/, 'must be "max/windowSeconds", e.g. 30/600'),
     )
+    .refine((v) => Number(v.split('/')[1]) <= 3600, 'window must be at most 3600 seconds')
     .transform((v): RateLimit => {
       const [max, windowSeconds] = v.split('/').map(Number);
       return { max, windowSeconds };
