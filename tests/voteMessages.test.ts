@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { voteErrorMessage, type VoteErrorCode } from '@/lib/voteMessages';
+import { voteErrorMessage, VOTE_ERROR_CODES } from '@/lib/voteMessages';
 
 test('already_voted copy', () => {
   expect(voteErrorMessage('already_voted')).toEqual({
@@ -12,7 +12,13 @@ test('network copy', () => {
   expect(voteErrorMessage('network').title).toBe('Something went wrong.');
 });
 
-test('every code has a title', () => {
-  const codes: VoteErrorCode[] = ['already_voted','voting_not_open','voting_closed','token_invalid','invalid_team','turnstile_failed','rate_limited','network'];
-  for (const c of codes) expect(voteErrorMessage(c).title.length).toBeGreaterThan(0);
+test('voting_not_open copy covers paused voting', () => {
+  expect(voteErrorMessage('voting_not_open')).toEqual({
+    title: "Voting isn't open right now.",
+    body: 'Check back soon.',
+  });
+});
+
+test('every code has a non-empty title', () => {
+  for (const c of VOTE_ERROR_CODES) expect(voteErrorMessage(c).title.length).toBeGreaterThan(0);
 });

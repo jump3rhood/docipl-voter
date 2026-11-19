@@ -58,12 +58,12 @@ test('submits once on double click', async () => {
 });
 
 test('shows error and keeps selection', async () => {
-  const submit = vi.fn(async (): Promise<SubmitResult> => ({ ok: false, code: 'already_voted' }));
+  const submit = vi.fn(async (): Promise<SubmitResult> => ({ ok: false, code: 'rate_limited' }));
   render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);
   const card = screen.getByRole('radio', { name: /code red/i });
   await userEvent.click(card);
   await userEvent.click(voteButton());
-  expect(await screen.findByRole('alert')).toHaveTextContent("You've already voted!");
+  expect(await screen.findByRole('alert')).toHaveTextContent('Too many attempts.');
   expect(card).toHaveAttribute('aria-checked', 'true');
   expect(voteButton()).toBeEnabled();
 });
@@ -75,4 +75,78 @@ test('token_invalid shows new ballot link', async () => {
   await userEvent.click(voteButton());
   const link = await screen.findByRole('link', { name: 'Get a new ballot' });
   expect(link).toHaveAttribute('href', '/v');
+});
+
+test.each([
+  ['already_voted', 'VIEW LIVE RESULTS', '/results'],
+  ['voting_closed', 'VIEW FINAL RESULTS', '/results'],
+  ['voting_not_open', 'Back to home', '/'],
+] as const)('%s is terminal: escape link and no cast button', async (code, label, href) => {
+  const submit = vi.fn(async (): Promise<SubmitResult> => ({ ok: false, code }));
+  render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);
+  await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
+  await userEvent.click(voteButton());
+  expect(await screen.findByRole('link', { name: label })).toHaveAttribute('href', href);
+  expect(screen.queryByRole('button', { name: /cast my vote|submitting/i })).toBeNull();
+});
+
+test('retryable errors keep the cast button', async () => {
+  const submit = vi.fn(async (): Promise<SubmitResult> => ({ ok: false, code: 'rate_limited' }));
+  render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);
+  await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
+  await userEvent.click(voteButton());
+  await screen.findByRole('alert');
+  expect(voteButton()).toBeEnabled();
+});
+
+test('token_invalid link is a plain anchor', async () => {
+  const submit = vi.fn(async (): Promise<SubmitResult> => ({ ok: false, code: 'token_invalid' }));
+  render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);
+  await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
+  await userEvent.click(voteButton());
+  const link = await screen.findByRole('link', { name: 'Get a new ballot' });
+  expect(Array.from(link.attributes).map((x) => x.name).sort()).toEqual(['class', 'href']);
+});
+
+test('privacy link is present', () => {
+  render(<BallotForm teams={teams} submit={okSubmit()} onVoted={vi.fn()} />);
+  expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy');
+});
+
+test('a rejecting submit shows the network message and keeps selection', async () => {
+  const submit = vi.fn(async (): Promise<SubmitResult> => {
+    throw new Error('boom');
+  });
+  render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);
+  const card = screen.getByRole('radio', { name: /code red/i });
+  await userEvent.click(card);
+  await userEvent.click(voteButton());
+  expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong.');
+  expect(card).toHaveAttribute('aria-checked', 'true');
+  expect(voteButton()).toBeEnabled();
+});
+
+test('cards are disabled while submitting and ignore clicks', async () => {
+  const submit = vi.fn(
+    () => new Promise<SubmitResult>((r) => setTimeout(() => r({ ok: true, teamName: 'X' }), 100)),
+  );
+  render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);
+  const a = screen.getByRole('radio', { name: /code red/i });
+  const b = screen.getByRole('radio', { name: /smash squad/i });
+  await userEvent.click(a);
+  await userEvent.click(voteButton());
+  expect(b).toHaveAttribute('aria-disabled', 'true');
+  await userEvent.click(b);
+  expect(a).toHaveAttribute('aria-checked', 'true');
+  expect(b).toHaveAttribute('aria-checked', 'false');
+});
+
+test('selecting a different team clears the error alert', async () => {
+  const submit = vi.fn(async (): Promise<SubmitResult> => ({ ok: false, code: 'rate_limited' }));
+  render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);
+  await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
+  await userEvent.click(voteButton());
+  await screen.findByRole('alert');
+  await userEvent.click(screen.getByRole('radio', { name: /smash squad/i }));
+  expect(screen.queryByRole('alert')).toBeNull();
 });

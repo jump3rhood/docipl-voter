@@ -17,3 +17,8 @@ test('ThankYou without team', () => {
   expect(screen.queryByText('You voted for:')).toBeNull();
   expect(screen.getByText('Your vote has been recorded.')).toBeTruthy();
 });
+
+test('ThankYou has a privacy link', () => {
+  render(<ThankYou teamName={null} />);
+  expect(screen.getByRole('link', { name: 'Privacy' }).getAttribute('href')).toBe('/privacy');
+});

@@ -1,9 +1,10 @@
 import type { VotingState } from '@/lib/votingState';
-import { PrimaryLink } from '@/components/PrimaryLink';
+import Link from 'next/link';
+import { PrimaryLink, privacyLinkClass } from '@/components/PrimaryLink';
 
 export function StatusScreen({ state, startLabel }: { state: VotingState; startLabel: string }) {
   return (
-    <div className="flex flex-1 flex-col justify-center gap-4 pb-16">
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 pb-8 text-center">
       <p className="text-sm font-extrabold tracking-wide text-brand-yellow">
         DOC IPL PEOPLE&apos;S CHOICE
       </p>
@@ -23,7 +24,7 @@ export function StatusScreen({ state, startLabel }: { state: VotingState; startL
       {state === 'open' && (
         <>
           <h1 className="text-3xl font-extrabold leading-tight">Voting is open!</h1>
-          <PrimaryLink href="/v">VOTE NOW</PrimaryLink>
+          <PrimaryLink href="/v" plain>VOTE NOW</PrimaryLink>
         </>
       )}
       {state === 'closed' && (
@@ -33,6 +34,9 @@ export function StatusScreen({ state, startLabel }: { state: VotingState; startL
           <PrimaryLink href="/results">VIEW FINAL RESULTS</PrimaryLink>
         </>
       )}
+      <Link href="/privacy" className={privacyLinkClass}>
+        Privacy
+      </Link>
     </div>
   );
 }

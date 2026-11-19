@@ -43,3 +43,15 @@ test('network failure → generic error', async () => {
     code: 'network',
   });
 });
+
+test.each([
+  ['ok without teamName', { ok: true }],
+  ['null body', null],
+  ['array body', [{ ok: true, teamName: 'X' }]],
+])('%s -> network', async (_name, body) => {
+  const fetchImpl = async () => Response.json(body);
+  expect(await postVote(input, fetchImpl as unknown as typeof fetch)).toEqual({
+    ok: false,
+    code: 'network',
+  });
+});

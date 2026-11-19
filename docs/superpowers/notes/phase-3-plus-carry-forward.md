@@ -21,3 +21,11 @@ Collected from the Phase 1–2 reviews. Each later plan must account for the ite
 ## Optional cleanup
 - Unused `create extension pgcrypto`; nullable `rate_limits.count` and `created_at` columns (cosmetic).
 - Run the Supabase security and performance advisors on the hosted project after `db push`.
+
+## From Phase 3 final review
+- Phase 4 `/api/vote` contract: success is `{ ok: true, teamName: string }` (always include `teamName`; the generated types wrongly mark `cast_vote` `team_name` as non-null). Errors are `{ ok: false, code }` with `code` from `VOTE_ERROR_CODES` (`src/lib/voteMessages.ts`). The DB status `token_used` must map to `already_voted`.
+- Add a branded `app/error.tsx` with a retry button.
+- `/thanks` must be gated by the voter cookie in Phase 5 (Suspense + `connection()`).
+- Turnstile: BallotForm needs a `canSubmit` gate (no submit until the widget has a token), and the widget must be reset after every failed submit.
+- `/vote/[token]` needs a page title and an empty-team-list message.
+- `/v` becomes a token-minting route handler: every link to it must stay a plain `<a>` (no `next/link` prefetch).

@@ -1,5 +1,8 @@
 import Image from 'next/image';
+import { pickTextColor } from '@/lib/contrast';
 import type { Team } from '@/lib/voting';
+
+const FALLBACK_ACCENT = '#2A4F8F';
 
 export function teamInitials(name: string): string {
   return name
@@ -14,18 +17,25 @@ export function TeamCard({
   team,
   selected,
   onSelect,
+  disabled = false,
 }: {
   team: Team;
   selected: boolean;
   onSelect: () => void;
+  disabled?: boolean;
 }) {
   return (
     <button
       type="button"
       role="radio"
       aria-checked={selected}
-      onClick={onSelect}
-      className={`relative flex min-h-[120px] flex-col items-center justify-center gap-2 rounded-2xl bg-navy-light p-3 text-center text-white ${
+      aria-disabled={disabled}
+      onClick={() => {
+        if (!disabled) onSelect();
+      }}
+      className={`relative flex min-h-[120px] flex-col items-center justify-center gap-2 rounded-2xl bg-navy-light p-3 text-center text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow ${
+        disabled ? 'cursor-not-allowed opacity-60' : ''
+      } ${
         selected ? 'border-[3px] border-brand-yellow' : 'border-[3px] border-transparent'
       }`}
     >
@@ -49,8 +59,11 @@ export function TeamCard({
       ) : (
         <span
           aria-hidden="true"
-          style={{ backgroundColor: team.accentColor ?? '#2A4F8F' }}
-          className="flex h-16 w-16 items-center justify-center rounded-full text-xl font-extrabold text-white"
+          style={{
+            backgroundColor: team.accentColor ?? FALLBACK_ACCENT,
+            color: team.accentColor ? pickTextColor(team.accentColor) : '#FFFFFF',
+          }}
+          className="flex h-16 w-16 items-center justify-center rounded-full text-xl font-extrabold"
         >
           {teamInitials(team.name)}
         </span>

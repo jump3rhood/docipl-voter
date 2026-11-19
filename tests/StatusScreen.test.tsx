@@ -13,6 +13,17 @@ test('open links to /v', () => {
   expect(screen.getByText('Voting is open!')).toBeInTheDocument();
   expect(screen.getByRole('link', { name: 'VOTE NOW' })).toHaveAttribute('href', '/v');
 });
+test('VOTE NOW is a plain anchor (no Next Link prefetch of the token-minting route)', () => {
+  render(<StatusScreen state="open" startLabel="x" />);
+  const a = screen.getByRole('link', { name: 'VOTE NOW' });
+  expect(a.tagName).toBe('A');
+  // next/link renders extra attributes; a plain anchor carries only href and class.
+  expect(Array.from(a.attributes).map((x) => x.name).sort()).toEqual(['class', 'href']);
+});
+test('privacy link is present', () => {
+  render(<StatusScreen state="before" startLabel="x" />);
+  expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy');
+});
 test('closed links to results', () => {
   render(<StatusScreen state="closed" startLabel="x" />);
   expect(screen.getByText('Voting has closed.')).toBeInTheDocument();
@@ -23,5 +34,5 @@ test('paused copy', () => {
   render(<StatusScreen state="paused" startLabel="x" />);
   expect(screen.getByText('Voting is paused.')).toBeInTheDocument();
   expect(screen.getByText('Check back soon.')).toBeInTheDocument();
-  expect(screen.queryAllByRole('link')).toHaveLength(0);
+  expect(screen.queryByRole('link', { name: /vote|results/i })).toBeNull();
 });
