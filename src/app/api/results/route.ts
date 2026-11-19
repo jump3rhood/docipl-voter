@@ -7,7 +7,7 @@ export async function GET(): Promise<NextResponse> {
     const { total, rows } = await getResults();
     return NextResponse.json(
       { total, rows },
-      { headers: { 'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=20' } },
+      { headers: { 'Cache-Control': 'public, s-maxage=10, stale-while-revalidate=5' } },
     );
   } catch (err) {
     console.error('[results] unavailable', err instanceof Error ? err.message : String(err));

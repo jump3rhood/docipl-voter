@@ -32,7 +32,7 @@ describe('GET /api/results', () => {
     const res = await GET();
     expect(res.status).toBe(200);
     expect(res.headers.get('cache-control')).toBe(
-      'public, s-maxage=10, stale-while-revalidate=20',
+      'public, s-maxage=10, stale-while-revalidate=5',
     );
     const body = await res.json();
     expect(Object.keys(body).sort()).toEqual(['rows', 'total']);
