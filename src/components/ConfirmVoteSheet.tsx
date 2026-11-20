@@ -37,11 +37,10 @@ function Sheet({ team, submitting, canSubmit = true, returnFocusRef, onConfirm, 
     return () => {
       document.body.style.overflow = prevOverflow;
       // Read at cleanup on purpose: the button may have remounted since open.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
       const target = returnFocusRef?.current ?? opener;
       if (target?.isConnected) target.focus?.();
     };
-  }, []);
+  }, [returnFocusRef]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
