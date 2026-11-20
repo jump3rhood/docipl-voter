@@ -31,13 +31,13 @@ function Sheet({ team, submitting, canSubmit = true, returnFocusRef, onConfirm, 
 
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
+    const returnEl = returnFocusRef?.current ?? null;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     yesRef.current?.focus();
     return () => {
       document.body.style.overflow = prevOverflow;
-      // Read at cleanup on purpose: the button may have remounted since open.
-      const target = returnFocusRef?.current ?? opener;
+      const target = returnEl ?? opener;
       if (target?.isConnected) target.focus?.();
     };
   }, [returnFocusRef]);
