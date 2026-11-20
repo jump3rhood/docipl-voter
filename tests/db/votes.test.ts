@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test } from 'vitest';
-import { openWindow, resetData, teamId } from './helpers';
+import { admin, openWindow, resetData, teamId } from './helpers';
 import { castVote, getTokenState, getVoterVote, mintToken, rateLimitHit } from '@/lib/votes';
 import { hashId, hashToken } from '@/lib/identity';
 import { randomToken } from '@/lib/crypto';
@@ -52,9 +52,18 @@ describe('vote wrappers', () => {
       ipHash: hashId('ip-d'),
       uaHash: null,
     });
-    const vote = await getVoterVote(browserHash);
-    expect(vote).toHaveProperty('accentColor');
-    expect(vote?.accentColor === null || /^#[0-9A-Fa-f]{6}$/.test(vote!.accentColor)).toBe(true);
+    expect(await getVoterVote(browserHash)).toEqual({
+      teamId: await teamId('code-red'),
+      teamName: 'Code Red',
+      accentColor: '#EF4444',
+    });
+    const id = await teamId('code-red');
+    try {
+      await admin.from('teams').update({ accent_color: null }).eq('id', id);
+      expect((await getVoterVote(browserHash))?.accentColor).toBeNull();
+    } finally {
+      await admin.from('teams').update({ accent_color: '#EF4444' }).eq('id', id);
+    }
   });
 
   test('castVote maps token_used', async () => {

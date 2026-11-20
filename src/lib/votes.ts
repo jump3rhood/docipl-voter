@@ -86,8 +86,8 @@ export async function getVoterVote(
     .select('accent_color')
     .eq('id', row.team_id)
     .maybeSingle();
-  if (teamError) throw new Error(`team accent lookup failed: ${teamError.message}`);
-  return { teamId: row.team_id, teamName: row.team_name, accentColor: team?.accent_color ?? null };
+  if (teamError) console.error('[thanks] accent lookup failed');
+  return { teamId: row.team_id, teamName: row.team_name, accentColor: teamError ? null : (team?.accent_color ?? null) };
 }
 
 export async function getTokenState(tokenHash: string): Promise<'active' | 'used' | 'invalid'> {
