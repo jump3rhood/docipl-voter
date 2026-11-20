@@ -72,6 +72,8 @@ export async function castVote(a: {
   return { status: row.status as CastStatus, teamName: (row.team_name as string | null) ?? null };
 }
 
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+
 export async function getVoterVote(
   browserHash: string,
 ): Promise<{ teamId: string; teamName: string; accentColor: string | null } | null> {
@@ -87,7 +89,12 @@ export async function getVoterVote(
     .eq('id', row.team_id)
     .maybeSingle();
   if (teamError) console.error('[thanks] accent lookup failed');
-  return { teamId: row.team_id, teamName: row.team_name, accentColor: teamError ? null : (team?.accent_color ?? null) };
+  const accent = teamError ? null : team?.accent_color;
+  return {
+    teamId: row.team_id,
+    teamName: row.team_name,
+    accentColor: typeof accent === 'string' && HEX_COLOR.test(accent) ? accent : null,
+  };
 }
 
 export async function getTokenState(tokenHash: string): Promise<'active' | 'used' | 'invalid'> {
