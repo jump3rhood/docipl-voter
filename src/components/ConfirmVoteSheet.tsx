@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { AnimatePresence, m } from 'motion/react';
+import { AnimatePresence, m } from 'framer-motion';
 import type { RefObject } from 'react';
 import type { Team } from '@/lib/voting';
 import { TeamBadge } from '@/components/TeamBadge';

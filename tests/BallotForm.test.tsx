@@ -13,10 +13,9 @@ const teams: Team[] = [
 
 const okSubmit = () => vi.fn(async (): Promise<SubmitResult> => ({ ok: true, teamName: 'Code Red' }));
 const voteButton = () => screen.getByRole('button', { name: /^(cast my vote|submitting)/i });
-const confirmButton = () => screen.getByRole('button', { name: /yes, cast my vote/i });
 async function castAndConfirm() {
   await userEvent.click(voteButton());
-  await userEvent.click(confirmButton());
+  await userEvent.click(await screen.findByRole('button', { name: /yes, cast my vote/i }));
 }
 
 test('button disabled until a team is selected', async () => {
@@ -59,7 +58,7 @@ test('submits once on double click', async () => {
   render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);
   await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
   await userEvent.click(voteButton());
-  await userEvent.dblClick(confirmButton());
+  await userEvent.dblClick(await screen.findByRole('button', { name: /yes, cast my vote/i }));
   expect(submit).toHaveBeenCalledTimes(1);
 });
 
@@ -190,7 +189,7 @@ test('cast opens confirm without submitting', async () => {
   render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);
   await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
   await userEvent.click(voteButton());
-  expect(screen.getByRole('dialog')).toHaveTextContent('Vote for Code Red?');
+  expect(await screen.findByRole('dialog')).toHaveTextContent('Vote for Code Red?');
   expect(submit).not.toHaveBeenCalled();
 });
 
@@ -200,7 +199,7 @@ test('cancel returns to ballot with selection kept', async () => {
   const card = screen.getByRole('radio', { name: /code red/i });
   await userEvent.click(card);
   await userEvent.click(voteButton());
-  await userEvent.click(screen.getByRole('button', { name: 'Change my pick' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Change my pick' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(card).toHaveAttribute('aria-checked', 'true');
   expect(submit).not.toHaveBeenCalled();
@@ -213,7 +212,7 @@ test('confirm double-tap submits once', async () => {
   render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);
   await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
   await userEvent.click(voteButton());
-  const yes = confirmButton();
+  const yes = await screen.findByRole('button', { name: /yes, cast my vote/i });
   await userEvent.click(yes);
   await userEvent.click(yes);
   expect(submit).toHaveBeenCalledTimes(1);
@@ -233,7 +232,7 @@ test('focus returns to CAST button after Change my pick', async () => {
   await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
   const cast = voteButton();
   await userEvent.click(cast);
-  await userEvent.click(screen.getByRole('button', { name: 'Change my pick' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Change my pick' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   expect(cast).toHaveFocus();
 });
@@ -243,6 +242,7 @@ test('YES shows Verifying… while canSubmit is false and recovers', async () =>
   const { rerender } = render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);
   await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
   await userEvent.click(voteButton());
+  await screen.findByRole('dialog');
   rerender(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} canSubmit={false} />);
   const dialog = screen.getByRole('dialog');
   const yes = within(dialog).getByRole('button', { name: /verifying/i });
@@ -250,5 +250,5 @@ test('YES shows Verifying… while canSubmit is false and recovers', async () =>
   await userEvent.click(yes);
   expect(submit).not.toHaveBeenCalled();
   rerender(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} canSubmit />);
-  expect(confirmButton()).toBeEnabled();
+  expect(screen.getByRole('button', { name: /yes, cast my vote/i })).toBeEnabled();
 });

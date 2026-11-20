@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { LazyMotion, domMax, m } from 'motion/react';
+import { LazyMotion, m } from 'framer-motion';
 import { PrimaryLink, privacyLinkClass } from '@/components/PrimaryLink';
 import { TeamBadge } from '@/components/TeamBadge';
 import {
@@ -14,6 +14,8 @@ import {
   type ResultsPayload,
 } from '@/lib/resultsFormat';
 import type { VotingState } from '@/lib/votingState';
+
+const loadDomMax = () => import('@/lib/motionFeaturesMax').then((r) => r.default);
 
 function subheading(state: VotingState): string {
   if (state === 'open') return 'Live results · updates every 15 seconds';
@@ -119,7 +121,7 @@ export function Leaderboard({
         <p className="mt-2 text-base font-semibold text-brand-yellow">{totalLabel(data.total)}</p>
       </div>
 
-      <LazyMotion features={domMax} strict>
+      <LazyMotion features={loadDomMax} strict>
       <ol className="flex flex-col gap-2">
         {data.rows.map((r) => {
           const medal = medalFor(r);

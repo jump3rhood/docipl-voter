@@ -1,7 +1,7 @@
 'use client';
 
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
-import { m, type Variants } from 'motion/react';
+import { m, type Variants } from 'framer-motion';
 
 const TRANSITION = { duration: 0.3, ease: 'easeOut' } as const;
 

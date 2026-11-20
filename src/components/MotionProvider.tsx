@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { LazyMotion, MotionConfig, domAnimation } from "motion/react";
+import { LazyMotion, MotionConfig, domAnimation } from "framer-motion";
 
 export function MotionProvider({ children }: { children: ReactNode }) {
   return (

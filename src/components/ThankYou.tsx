@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { m } from 'motion/react';
+import { m } from 'framer-motion';
 import { Reveal } from '@/components/motion/Reveal';
 import { PrimaryLink, privacyLinkClass } from '@/components/PrimaryLink';
 import { Celebration } from '@/components/Celebration';

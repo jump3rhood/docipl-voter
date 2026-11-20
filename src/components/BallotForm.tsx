@@ -2,13 +2,20 @@
 
 import { useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { m } from 'motion/react';
+import dynamic from 'next/dynamic';
+import { m } from 'framer-motion';
 import { Reveal, RevealGroup, RevealItem } from '@/components/motion/Reveal';
 import type { Team } from '@/lib/voting';
 import { voteErrorMessage, type VoteErrorCode } from '@/lib/voteMessages';
-import { ConfirmVoteSheet } from '@/components/ConfirmVoteSheet';
 import { TeamCard } from '@/components/TeamCard';
 import { PrimaryLink, primaryButtonClass, privacyLinkClass } from '@/components/PrimaryLink';
+
+// Lazy: keeps the sheet (and AnimatePresence) out of the ballot's first-load JS.
+const ConfirmVoteSheet = dynamic(
+  () => import('@/components/ConfirmVoteSheet').then((mod) => mod.ConfirmVoteSheet),
+  { ssr: false },
+);
+const prewarmSheet = () => void import('@/components/ConfirmVoteSheet');
 
 const TERMINAL: Partial<Record<VoteErrorCode, { label: string; href: string }>> = {
   already_voted: { label: 'VIEW LIVE RESULTS', href: '/results' },
@@ -87,6 +94,7 @@ export function BallotForm({
               selected={team.id === selectedId}
               disabled={submitting}
               onSelect={() => {
+                if (selectedId === null) prewarmSheet();
                 setSelectedId(team.id);
                 setError(null);
               }}
@@ -145,15 +153,17 @@ export function BallotForm({
           </Link>
         </div>
       </div>
-      <ConfirmVoteSheet
-        team={teams.find((t) => t.id === selectedId) ?? null}
-        open={confirmOpen}
-        submitting={submitting}
-        canSubmit={canSubmit}
-        returnFocusRef={castRef}
-        onConfirm={handleSubmit}
-        onCancel={() => setConfirmOpen(false)}
-      />
+      {selectedId !== null && (
+        <ConfirmVoteSheet
+          team={teams.find((t) => t.id === selectedId) ?? null}
+          open={confirmOpen}
+          submitting={submitting}
+          canSubmit={canSubmit}
+          returnFocusRef={castRef}
+          onConfirm={handleSubmit}
+          onCancel={() => setConfirmOpen(false)}
+        />
+      )}
     </div>
   );
 }

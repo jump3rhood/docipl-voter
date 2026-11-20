@@ -1,6 +1,6 @@
 'use client';
 
-import { m } from 'motion/react';
+import { m } from 'framer-motion';
 import { TeamBadge, teamInitials } from '@/components/TeamBadge';
 import type { Team } from '@/lib/voting';
 
