@@ -28,7 +28,7 @@ export function createBalls(
 ): Ball[] {
   const balls: Ball[] = [];
   for (let i = 0; i < count; i++) {
-    const r = 14 + rand() * 14;
+    const r = 12 + rand() * 12;
     const dir = rand() * Math.PI * 2;
     const speed = MIN_DRIFT + rand() * (MAX_DRIFT - MIN_DRIFT);
     balls.push({
@@ -39,7 +39,7 @@ export function createBalls(
       r,
       angle: rand() * Math.PI * 2,
       spin: (rand() < 0.5 ? -1 : 1) * BASE_SPIN,
-      alpha: 0.35 + rand() * 0.25,
+      alpha: 0.8 + rand() * 0.15,
     });
   }
   return balls;
@@ -134,6 +134,18 @@ export function flickAt(balls: Ball[], x: number, y: number): boolean {
     }
   }
   return true;
+}
+
+/** Height-only changes below this are mobile URL-bar collapse/expand; no realloc. */
+const REALLOC_HEIGHT_DELTA = 120;
+
+export function needsRealloc(
+  prevWidth: number,
+  prevHeight: number,
+  width: number,
+  height: number,
+): boolean {
+  return width !== prevWidth || Math.abs(height - prevHeight) >= REALLOC_HEIGHT_DELTA;
 }
 
 export function ballCountFor(hardwareConcurrency: number | undefined): number {

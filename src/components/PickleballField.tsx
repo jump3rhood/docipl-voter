@@ -8,10 +8,13 @@ import {
   createBalls,
   flickAt,
   isInteractiveTarget,
+  needsRealloc,
   stepBalls,
 } from "@/lib/pickleballs";
 
 const SPRITE_SIZE = 128;
+/** Max pointer travel (px) between down and up that still counts as a tap. */
+const TAP_SLOP = 10;
 
 function makeSprite(): HTMLCanvasElement | null {
   const c = document.createElement("canvas");
@@ -21,17 +24,28 @@ function makeSprite(): HTMLCanvasElement | null {
   if (!g) return null;
   const mid = SPRITE_SIZE / 2;
   const rad = mid - 2;
-  g.fillStyle = "#FFD21F";
+  const fill = g.createRadialGradient(
+    SPRITE_SIZE * 0.35,
+    SPRITE_SIZE * 0.3,
+    0,
+    mid,
+    mid,
+    rad,
+  );
+  fill.addColorStop(0, "#F2FF9E");
+  fill.addColorStop(0.55, "#D4F23A");
+  fill.addColorStop(1, "#A9C81E");
+  g.fillStyle = fill;
   g.beginPath();
   g.arc(mid, mid, rad, 0, Math.PI * 2);
   g.fill();
-  g.lineWidth = 6;
-  g.strokeStyle = "#D9AE00";
+  g.lineWidth = 4;
+  g.strokeStyle = "#9DB81A";
   g.stroke();
-  g.fillStyle = "#B88F00";
-  const holes = 7;
-  for (let i = 0; i < holes; i++) {
-    const a = (i / holes) * Math.PI * 2;
+  g.fillStyle = "rgba(7,28,61,0.55)";
+  // Hole 0 is the centre; holes 1..6 form a ring.
+  for (let i = 0; i < 7; i++) {
+    const a = ((i - 1) / 6) * Math.PI * 2;
     const d = i === 0 ? 0 : rad * 0.55;
     g.beginPath();
     g.arc(mid + Math.cos(a) * d, mid + Math.sin(a) * d, rad * 0.14, 0, Math.PI * 2);
@@ -56,45 +70,69 @@ export function PickleballField() {
 
     const reduced =
       window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-    let width = window.innerWidth;
-    let height = window.innerHeight;
+    // Backing store size (CSS px) and the bounds balls are clamped to.
+    let allocWidth = 0;
+    let allocHeight = 0;
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
     let balls: Ball[] = [];
 
     const resize = () => {
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      width = window.innerWidth;
-      height = window.innerHeight;
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const nextDpr = Math.min(window.devicePixelRatio || 1, 2);
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      if (nextDpr !== dpr || !allocWidth || needsRealloc(allocWidth, allocHeight, vw, vh)) {
+        dpr = nextDpr;
+        allocWidth = vw;
+        allocHeight = vh;
+        canvas.width = Math.round(vw * dpr);
+        canvas.height = Math.round(vh * dpr);
+        // Pin the CSS size to the backing store so small viewport changes don't stretch it.
+        canvas.style.width = `${vw}px`;
+        canvas.style.height = `${vh}px`;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+      width = Math.min(vw, allocWidth);
+      height = Math.min(vh, allocHeight);
     };
 
     const draw = () => {
-      ctx.clearRect(0, 0, width, height);
+      ctx.clearRect(0, 0, allocWidth, allocHeight);
       for (let i = 0; i < balls.length; i++) {
         const b = balls[i];
-        ctx.save();
+        const cos = dpr * Math.cos(b.angle);
+        const sin = dpr * Math.sin(b.angle);
         ctx.globalAlpha = b.alpha;
-        ctx.translate(b.x, b.y);
-        ctx.rotate(b.angle);
+        ctx.setTransform(cos, sin, -sin, cos, dpr * b.x, dpr * b.y);
         ctx.drawImage(sprite, -b.r, -b.r, b.r * 2, b.r * 2);
-        ctx.restore();
       }
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.globalAlpha = 1;
     };
 
     resize();
     balls = createBalls(ballCountFor(navigator.hardwareConcurrency), width, height);
 
-    const onResize = () => {
+    // Mobile URL-bar collapse fires resize repeatedly: handle at most once per frame.
+    let resizeRaf = 0;
+    const applyResize = () => {
+      resizeRaf = 0;
       resize();
       stepBalls(balls, 0, width, height);
       draw();
+    };
+    const onResize = () => {
+      if (!resizeRaf) resizeRaf = requestAnimationFrame(applyResize);
     };
     window.addEventListener("resize", onResize);
 
     if (reduced) {
       draw();
-      return () => window.removeEventListener("resize", onResize);
+      return () => {
+        if (resizeRaf) cancelAnimationFrame(resizeRaf);
+        window.removeEventListener("resize", onResize);
+      };
     }
 
     let raf = 0;
@@ -127,13 +165,28 @@ export function PickleballField() {
       if (!document.hidden) start();
     };
 
+    // Flick only on a tap: pointerup within TAP_SLOP of its pointerdown, so scrolls
+    // and drags don't move balls.
+    const downs = new Map<number, { x: number; y: number }>();
     const onPointerDown = (e: PointerEvent) => {
       if (isInteractiveTarget(e.target as Element | null)) return;
+      downs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    };
+    const onPointerUp = (e: PointerEvent) => {
+      const down = downs.get(e.pointerId);
+      if (!down) return;
+      downs.delete(e.pointerId);
+      if (Math.hypot(e.clientX - down.x, e.clientY - down.y) >= TAP_SLOP) return;
       flickAt(balls, e.clientX, e.clientY);
+    };
+    const onPointerCancel = (e: PointerEvent) => {
+      downs.delete(e.pointerId);
     };
 
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
+    window.addEventListener("pointerup", onPointerUp, { passive: true });
+    window.addEventListener("pointercancel", onPointerCancel, { passive: true });
 
     if (typeof window.requestIdleCallback === "function") {
       idleHandle = window.requestIdleCallback(start);
@@ -144,10 +197,13 @@ export function PickleballField() {
 
     return () => {
       if (raf) cancelAnimationFrame(raf);
+      if (resizeRaf) cancelAnimationFrame(resizeRaf);
       if (idleHandle !== undefined) window.cancelIdleCallback(idleHandle);
       if (startTimer !== undefined) window.clearTimeout(startTimer);
       window.removeEventListener("resize", onResize);
       window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerCancel);
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, [hidden]);

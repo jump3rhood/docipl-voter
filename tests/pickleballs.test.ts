@@ -6,6 +6,7 @@ import {
   createBalls,
   flickAt,
   isInteractiveTarget,
+  needsRealloc,
   stepBalls,
 } from '@/lib/pickleballs';
 
@@ -25,10 +26,10 @@ test('createBalls respects count, radius and alpha ranges', () => {
   const balls = createBalls(8, 390, 844, seeded());
   expect(balls).toHaveLength(8);
   for (const b of balls) {
-    expect(b.r).toBeGreaterThanOrEqual(14);
-    expect(b.r).toBeLessThanOrEqual(28);
-    expect(b.alpha).toBeGreaterThanOrEqual(0.35);
-    expect(b.alpha).toBeLessThanOrEqual(0.6);
+    expect(b.r).toBeGreaterThanOrEqual(12);
+    expect(b.r).toBeLessThanOrEqual(24);
+    expect(b.alpha).toBeGreaterThanOrEqual(0.8);
+    expect(b.alpha).toBeLessThanOrEqual(0.95);
     const speed = Math.hypot(b.vx, b.vy);
     expect(speed).toBeGreaterThanOrEqual(8 - 1e-6);
     expect(speed).toBeLessThanOrEqual(20 + 1e-6);
@@ -79,6 +80,17 @@ test('flick on exact centre pushes upward', () => {
   const balls = [ball(100, 100)];
   expect(flickAt(balls, 100, 100)).toBe(true);
   expect(balls[0].vy).toBeLessThan(-500);
+});
+
+test('needsRealloc skips small height-only changes (mobile URL bar)', () => {
+  expect(needsRealloc(390, 844, 390, 844)).toBe(false);
+  expect(needsRealloc(390, 844, 390, 900)).toBe(false);
+  expect(needsRealloc(390, 844, 390, 790)).toBe(false);
+  expect(needsRealloc(390, 844, 390, 844 + 119)).toBe(false);
+  expect(needsRealloc(390, 844, 390, 844 + 120)).toBe(true);
+  expect(needsRealloc(390, 844, 390, 600)).toBe(true);
+  expect(needsRealloc(390, 844, 844, 390)).toBe(true);
+  expect(needsRealloc(390, 844, 391, 844)).toBe(true);
 });
 
 test('ballCountFor', () => {
