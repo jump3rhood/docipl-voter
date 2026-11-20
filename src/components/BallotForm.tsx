@@ -38,6 +38,7 @@ export function BallotForm({
   const [error, setError] = useState<VoteErrorCode | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const inFlight = useRef(false);
+  const castRef = useRef<HTMLButtonElement>(null);
 
   async function handleSubmit() {
     if (!selectedId || !canSubmit || inFlight.current) return;
@@ -117,6 +118,7 @@ export function BallotForm({
           <PrimaryLink href={terminal.href}>{terminal.label}</PrimaryLink>
         ) : (
         <button
+          ref={castRef}
           type="button"
           onClick={() => setConfirmOpen(true)}
           disabled={!selectedId || !canSubmit || submitting}
@@ -147,6 +149,8 @@ export function BallotForm({
         team={teams.find((t) => t.id === selectedId) ?? null}
         open={confirmOpen}
         submitting={submitting}
+        canSubmit={canSubmit}
+        returnFocusRef={castRef}
         onConfirm={handleSubmit}
         onCancel={() => setConfirmOpen(false)}
       />

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { test, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BallotForm, type SubmitResult } from '@/components/BallotForm';
 import type { Team } from '@/lib/voting';
@@ -226,4 +226,29 @@ test('failed submit closes sheet and shows error', async () => {
   await castAndConfirm();
   expect(await screen.findByRole('alert')).toHaveTextContent('Too many attempts.');
   await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+});
+
+test('focus returns to CAST button after Change my pick', async () => {
+  render(<BallotForm teams={teams} submit={okSubmit()} onVoted={vi.fn()} />);
+  await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
+  const cast = voteButton();
+  await userEvent.click(cast);
+  await userEvent.click(screen.getByRole('button', { name: 'Change my pick' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(cast).toHaveFocus();
+});
+
+test('YES shows Verifying… while canSubmit is false and recovers', async () => {
+  const submit = okSubmit();
+  const { rerender } = render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);
+  await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
+  await userEvent.click(voteButton());
+  rerender(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} canSubmit={false} />);
+  const dialog = screen.getByRole('dialog');
+  const yes = within(dialog).getByRole('button', { name: /verifying/i });
+  expect(yes).toBeDisabled();
+  await userEvent.click(yes);
+  expect(submit).not.toHaveBeenCalled();
+  rerender(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} canSubmit />);
+  expect(confirmButton()).toBeEnabled();
 });

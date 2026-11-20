@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { test, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ConfirmVoteSheet } from '@/components/ConfirmVoteSheet';
 import type { Team } from '@/lib/voting';
@@ -58,4 +58,28 @@ test('Tab cycles within the sheet', async () => {
   expect(screen.getByRole('button', { name: 'Change my pick' })).toHaveFocus();
   await userEvent.tab();
   expect(screen.getByRole('button', { name: 'YES, CAST MY VOTE' })).toHaveFocus();
+});
+
+test('Shift+Tab wraps from YES to Change my pick', async () => {
+  setup();
+  await userEvent.tab({ shift: true });
+  expect(screen.getByRole('button', { name: 'Change my pick' })).toHaveFocus();
+});
+
+test('Escape does nothing after the sheet closes', async () => {
+  const onCancel = vi.fn();
+  const props = { team, submitting: false, onConfirm: vi.fn(), onCancel };
+  const { rerender } = render(<ConfirmVoteSheet {...props} open />);
+  rerender(<ConfirmVoteSheet {...props} open={false} />);
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  await userEvent.keyboard('{Escape}');
+  expect(onCancel).not.toHaveBeenCalled();
+});
+
+test('locks body scroll while open and restores it', async () => {
+  const props = { team, submitting: false, onConfirm: vi.fn(), onCancel: vi.fn() };
+  const { rerender } = render(<ConfirmVoteSheet {...props} open />);
+  expect(document.body.style.overflow).toBe('hidden');
+  rerender(<ConfirmVoteSheet {...props} open={false} />);
+  await waitFor(() => expect(document.body.style.overflow).toBe(''));
 });

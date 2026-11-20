@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { AnimatePresence, m } from 'motion/react';
+import type { RefObject } from 'react';
 import type { Team } from '@/lib/voting';
 import { TeamBadge } from '@/components/TeamBadge';
 import { primaryButtonClass } from '@/components/PrimaryLink';
@@ -10,13 +11,15 @@ type Props = {
   team: Team | null;
   open: boolean;
   submitting: boolean;
+  canSubmit?: boolean;
+  returnFocusRef?: RefObject<HTMLElement | null>;
   onConfirm: () => void;
   onCancel: () => void;
 };
 
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-function Sheet({ team, submitting, onConfirm, onCancel }: Omit<Props, 'open'> & { team: Team }) {
+function Sheet({ team, submitting, canSubmit = true, returnFocusRef, onConfirm, onCancel }: Omit<Props, 'open'> & { team: Team }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const yesRef = useRef<HTMLButtonElement>(null);
   const submittingRef = useRef(submitting);
@@ -28,9 +31,15 @@ function Sheet({ team, submitting, onConfirm, onCancel }: Omit<Props, 'open'> & 
 
   useEffect(() => {
     const opener = document.activeElement as HTMLElement | null;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     yesRef.current?.focus();
     return () => {
-      opener?.focus?.();
+      document.body.style.overflow = prevOverflow;
+      // Read at cleanup on purpose: the button may have remounted since open.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      const target = returnFocusRef?.current ?? opener;
+      if (target?.isConnected) target.focus?.();
     };
   }, []);
 
@@ -76,7 +85,7 @@ function Sheet({ team, submitting, onConfirm, onCancel }: Omit<Props, 'open'> & 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 cursor-default bg-black/60"
+        className="absolute inset-0 cursor-default touch-none overscroll-contain bg-black/60"
       />
       <m.div
         ref={panelRef}
@@ -98,7 +107,7 @@ function Sheet({ team, submitting, onConfirm, onCancel }: Omit<Props, 'open'> & 
           ref={yesRef}
           type="button"
           onClick={onConfirm}
-          disabled={submitting}
+          disabled={submitting || !canSubmit}
           className={`${primaryButtonClass} mt-2 gap-2 disabled:cursor-not-allowed disabled:opacity-50`}
         >
           {submitting ? (
@@ -109,6 +118,8 @@ function Sheet({ team, submitting, onConfirm, onCancel }: Omit<Props, 'open'> & 
               />
               Submitting…
             </>
+          ) : !canSubmit ? (
+            'Verifying…'
           ) : (
             'YES, CAST MY VOTE'
           )}
