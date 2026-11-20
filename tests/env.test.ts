@@ -67,10 +67,10 @@ describe('parseServerEnv', () => {
           .toThrow(/NEXT_PUBLIC_TURNSTILE_SITE_KEY/);
       },
     );
-    test('short ADMIN_PASSWORD rejected in production, long accepted', () => {
-      expect(() => parseServerEnv({ ...real, ADMIN_PASSWORD: 'x'.repeat(19), VERCEL_ENV: 'production' }))
+    test('ADMIN_PASSWORD needs 8+ characters, in production too', () => {
+      expect(() => parseServerEnv({ ...real, ADMIN_PASSWORD: 'x'.repeat(7), VERCEL_ENV: 'production' }))
         .toThrow(/ADMIN_PASSWORD/);
-      expect(() => parseServerEnv({ ...real, ADMIN_PASSWORD: 'x'.repeat(20), VERCEL_ENV: 'production' }))
+      expect(() => parseServerEnv({ ...real, ADMIN_PASSWORD: 'x'.repeat(8), VERCEL_ENV: 'production' }))
         .not.toThrow();
       expect(() => parseServerEnv({ ...valid, VERCEL_ENV: 'preview' })).not.toThrow();
     });

@@ -34,7 +34,7 @@ For local dev, Cloudflare Turnstile test keys work (see comments in `.env.exampl
 6. Generate `HASH_SECRET` once (`openssl rand -hex 32`). Never rotate it during voting: every IP, device and voter hash would change, so duplicate checks and per-device caps would reset.
 7. Set the Vercel env vars from `.env.example`. `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are server-only; never expose them to the browser.
 8. `NEXT_PUBLIC_SITE_URL` must equal the production origin exactly (the vote API checks the request origin against it).
-9. `ADMIN_PASSWORD` must be 20+ random characters (the app refuses to start on production with a shorter one) and `ADMIN_SESSION_SECRET` 32+ random bytes. Sessions cannot be revoked one by one; rotating `ADMIN_SESSION_SECRET` logs everyone out.
+9. `ADMIN_PASSWORD` must be at least 8 characters (the app refuses to start with a shorter one; longer and random is safer) and `ADMIN_SESSION_SECRET` 32+ random bytes. Sessions cannot be revoked one by one; rotating `ADMIN_SESSION_SECRET` logs everyone out.
 10. Previews must use a separate Supabase project (or no DB env vars), and Vercel Deployment Protection must stay on.
 11. Keep "Automatically expose System Environment Variables" on in Vercel: the `VERCEL_ENV` checks depend on it.
 12. Deploy to Vercel. Redeploy after any env change: env vars are read at build/start, so changes do not apply to the running deployment. Do not put a Cloudflare proxy (orange cloud) in front of Vercel: the client IP is read from `x-forwarded-for`, which a proxy would replace with its own address. If you add one, switch IP extraction to `cf-connecting-ip` first.

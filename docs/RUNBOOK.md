@@ -47,4 +47,4 @@ Use the final numbers from `/results` or the results CSV. Check that the export 
 - Never resume voting after a purge: duplicate checks no longer work.
 
 ## Rotating the admin secret
-Change `ADMIN_SESSION_SECRET` in Vercel and redeploy. Everyone is logged out, including anyone who should not have access. To change the password, change `ADMIN_PASSWORD` the same way. Use 20+ random characters for the password and 32+ random bytes for the secret.
+Change `ADMIN_SESSION_SECRET` in Vercel and redeploy. Everyone is logged out, including anyone who should not have access. To change the password, change `ADMIN_PASSWORD` the same way. Use at least 8 characters for the password (longer and random is safer) and 32+ random bytes for the secret.
