@@ -11,7 +11,7 @@ import {
   stepBalls,
 } from "@/lib/pickleballs";
 
-const SPRITE_SIZE = 64;
+const SPRITE_SIZE = 128;
 
 function makeSprite(): HTMLCanvasElement | null {
   const c = document.createElement("canvas");
@@ -25,7 +25,7 @@ function makeSprite(): HTMLCanvasElement | null {
   g.beginPath();
   g.arc(mid, mid, rad, 0, Math.PI * 2);
   g.fill();
-  g.lineWidth = 3;
+  g.lineWidth = 6;
   g.strokeStyle = "#D9AE00";
   g.stroke();
   g.fillStyle = "#B88F00";
@@ -157,7 +157,7 @@ export function PickleballField() {
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className="pointer-events-none fixed inset-0 -z-10"
+      className="pointer-events-none fixed inset-0 -z-10 h-full w-full"
     />
   );
 }

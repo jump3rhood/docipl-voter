@@ -111,7 +111,7 @@ export function Leaderboard({
   }, [pollMs, fetchImpl]);
 
   return (
-    <div className="flex flex-1 flex-col gap-4 bg-navy px-4 py-6 text-white">
+    <div className="flex flex-1 flex-col gap-4 px-4 py-6 text-white">
       <div className="text-center">
         <h1 className="text-2xl font-extrabold">Doc IPL People&apos;s Choice</h1>
         <p className="mt-1 text-sm text-white/80">{subheading(state)}</p>

@@ -15,7 +15,7 @@ async function Board() {
 
 export default function ResultsPage() {
   return (
-    <Suspense fallback={<div className="flex-1 bg-navy" aria-hidden />}>
+    <Suspense fallback={<div className="flex-1" aria-hidden />}>
       <Board />
     </Suspense>
   );

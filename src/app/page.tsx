@@ -12,7 +12,7 @@ async function Status() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div className="flex-1 bg-navy" aria-hidden />}>
+    <Suspense fallback={<div className="flex-1" aria-hidden />}>
       <Status />
     </Suspense>
   );

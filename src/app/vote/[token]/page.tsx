@@ -39,7 +39,7 @@ async function Ballot({ params }: { params: Promise<{ token: string }> }) {
 
 export default function VotePage({ params }: { params: Promise<{ token: string }> }) {
   return (
-    <Suspense fallback={<div className="flex-1 bg-navy" aria-hidden />}>
+    <Suspense fallback={<div className="flex-1" aria-hidden />}>
       <Ballot params={params} />
     </Suspense>
   );

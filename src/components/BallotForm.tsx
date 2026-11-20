@@ -88,7 +88,7 @@ export function BallotForm({
         ))}
       </div>
 
-      <div className="sticky bottom-0 mt-auto bg-gradient-to-t from-navy via-navy to-transparent pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-6">
+      <div className="sticky bottom-0 mt-auto bg-gradient-to-t from-navy/95 via-navy/80 to-transparent pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-6">
         {footerExtra}
         {message && (
           <div role="alert" className="mb-3 rounded-xl bg-navy-dark p-3 text-center">
