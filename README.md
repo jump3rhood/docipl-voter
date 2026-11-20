@@ -27,7 +27,7 @@ For local dev, Cloudflare Turnstile test keys work (see comments in `.env.exampl
 ## Go-live checklist
 
 1. Create a free Supabase project.
-2. `npx supabase link --project-ref <ref>` then `npx supabase db push`. Check that it applies all 4 migrations in `supabase/migrations/` (000001_init, 000002_functions, 000003_token_state, 000004_admin), then run the Supabase advisors (Dashboard → Advisors, security and performance) and fix anything they flag.
+2. `npx supabase link --project-ref <ref>` then `npx supabase db push`. Check that it applies all 5 migrations in `supabase/migrations/` (000001_init, 000002_functions, 000003_token_state, 000004_admin, 000005_service_role_grants), then run the Supabase advisors (Dashboard → Advisors, security and performance) and fix anything they flag.
 3. Run `supabase/seed.sql` once in the Supabase SQL editor.
 4. Create a Cloudflare Turnstile widget whose only hostname is the exact production host (e.g. `<project>.vercel.app`). Use a separate widget (or the test keys) for `localhost`. In production, a token issued for any other hostname is rejected.
 5. Use real (non-test) Turnstile keys in production. The app refuses to start on `VERCEL_ENV=production` with the `1x0000…`/`2x0000…`/`3x0000…` test keys.
