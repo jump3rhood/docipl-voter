@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { pickTextColor } from '@/lib/contrast';
+import { shouldOptimizeLogo } from '@/lib/logoImage';
 
 const FALLBACK_ACCENT = '#2A4F8F';
 
@@ -30,7 +31,8 @@ export function TeamBadge({
         alt=""
         width={size}
         height={size}
-        unoptimized
+        sizes={`${size}px`}
+        unoptimized={!shouldOptimizeLogo(logoUrl)}
         style={{ width: size, height: size }}
         className="shrink-0 object-contain"
       />

@@ -17,6 +17,17 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/team-logos/**",
+      },
+    ],
+    // Every upload gets a new timestamped filename, so a changed logo is a new URL.
+    minimumCacheTTL: 2678400,
+  },
   partialPrefetching: true,
   experimental: {
     // Logo uploads are up to 1 MB; the default Server Action body limit is also 1 MB.
