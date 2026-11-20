@@ -14,7 +14,7 @@ const eslintConfig = defineConfig([
             {
               name: "motion/react",
               message:
-                "Import from 'framer-motion' instead: motion/react reads fm.motion off a namespace import, which defeats tree-shaking and pulls the full motion bundle (drag, layout) into every page.",
+                "Use framer-motion: import from framer-motion. (motion/react reads fm.motion off a namespace import, which defeats tree-shaking and ships the full motion bundle to every page.)",
             },
           ],
         },
