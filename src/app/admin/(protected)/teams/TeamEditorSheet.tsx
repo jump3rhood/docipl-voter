@@ -19,6 +19,7 @@ export function slugify(name: string): string {
   return name
     .toLowerCase()
     .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40)
@@ -39,6 +40,7 @@ export function TeamEditorSheet({ team, onClose }: { team: AdminTeam | null; onC
 
   const panelRef = useRef<HTMLDivElement>(null);
   const nameRef = useRef<HTMLInputElement>(null);
+  const detailsRef = useRef<HTMLDetailsElement>(null);
   const pendingRef = useRef(pending);
   const closeRef = useRef(onClose);
   useEffect(() => {
@@ -49,6 +51,8 @@ export function TeamEditorSheet({ team, onClose }: { team: AdminTeam | null; onC
   // Close once the server reports success; its revalidation refreshes the list.
   useEffect(() => {
     if (state?.ok) closeRef.current();
+    // Slug errors point at a field inside the collapsed Advanced section; reveal it.
+    else if (state?.error && /slug/i.test(state.error) && detailsRef.current) detailsRef.current.open = true;
   }, [state]);
 
   // Revoke each local preview URL when it is replaced and on unmount.
@@ -236,7 +240,7 @@ export function TeamEditorSheet({ team, onClose }: { team: AdminTeam | null; onC
             </label>
           )}
 
-          <details className="rounded-2xl border border-white/20 px-4 py-2">
+          <details ref={detailsRef} className="rounded-2xl border border-white/20 px-4 py-2">
             <summary className="min-h-10 cursor-pointer py-2 font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow">
               Advanced
             </summary>

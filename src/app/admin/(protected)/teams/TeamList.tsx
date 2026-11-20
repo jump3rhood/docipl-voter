@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 // Admin-only: domMax and Reorder (full `motion` components) must never be imported by
 // voter-facing code. The nested LazyMotion below is deliberately NOT strict, which
 // overrides the root strict provider for this subtree (Reorder renders `motion.*`).
@@ -25,6 +25,7 @@ function Row({
   onOpen,
   onDragStart,
   onDragEnd,
+  locked,
 }: {
   team: AdminTeam;
   index: number;
@@ -33,6 +34,8 @@ function Row({
   onOpen: (team: AdminTeam) => void;
   onDragStart: () => void;
   onDragEnd: () => void;
+  /** A save is in flight: no new reorders until it settles, so saves never overlap. */
+  locked: boolean;
 }) {
   const controls = useDragControls();
   return (
@@ -43,16 +46,20 @@ function Row({
       dragControls={controls}
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
-      // The Move up/down buttons are the keyboard path; skip Reorder's own item tab stop.
+      // The Move up/down buttons are the keyboard path, so the item itself is not a tab stop.
       tabIndex={-1}
       className="relative flex items-center gap-1 rounded-2xl border border-white/15 bg-navy-dark py-1 pl-1 pr-1"
     >
       <span
         aria-hidden="true"
         data-testid="drag-handle"
-        onPointerDown={(e) => controls.start(e)}
+        onPointerDown={(e) => {
+          if (!locked) controls.start(e);
+        }}
         style={{ touchAction: 'none' }}
-        className="flex h-12 w-8 shrink-0 cursor-grab select-none items-center justify-center text-xl text-white/60 active:cursor-grabbing"
+        className={`flex h-12 w-8 shrink-0 select-none items-center justify-center text-xl text-white/60 ${
+          locked ? 'cursor-wait opacity-30' : 'cursor-grab active:cursor-grabbing'
+        }`}
       >
         ⠿
       </span>
@@ -88,7 +95,7 @@ function Row({
         <button
           type="button"
           aria-label={`Move ${team.name} up`}
-          disabled={index === 0}
+          disabled={locked || index === 0}
           onClick={() => onMove(index, -1)}
           className={`${smallButtonClass} h-6`}
         >
@@ -97,7 +104,7 @@ function Row({
         <button
           type="button"
           aria-label={`Move ${team.name} down`}
-          disabled={index === count - 1}
+          disabled={locked || index === count - 1}
           onClick={() => onMove(index, 1)}
           className={`${smallButtonClass} h-6`}
         >
@@ -117,13 +124,15 @@ export function TeamList({ teams }: { teams: AdminTeam[] }) {
   const [dragging, setDragging] = useState(false);
   // Handlers read the ref: the first onReorder can arrive before the drag-start re-render.
   const draggingRef = useRef(false);
-  const [saving, setSaving] = useState(0);
+  const [saving, setSaving] = useState(false);
+  // Set synchronously in handlers so a second tap before the re-render is also refused.
+  const savingRef = useRef(false);
   const [status, setStatus] = useState('');
   const [editing, setEditing] = useState<Editing>(null);
 
   // Adopt the server's list when it revalidates, but never mid-drag or mid-save
   // (the deferred update is picked up on the first render after both finish).
-  if (teams !== prevTeams && !dragging && saving === 0) {
+  if (teams !== prevTeams && !dragging && !saving) {
     const ids = teams.map((t) => t.id);
     setPrevTeams(teams);
     setOrder(ids);
@@ -133,9 +142,19 @@ export function TeamList({ teams }: { teams: AdminTeam[] }) {
   const byId = new Map(teams.map((t) => [t.id, t]));
   const rows = order.map((id) => byId.get(id)).filter((t): t is AdminTeam => t !== undefined);
 
+  // "Order saved" fades out after a few seconds; errors stay until the next action.
+  useEffect(() => {
+    if (status !== 'Order saved') return;
+    const t = setTimeout(() => setStatus(''), 3000);
+    return () => clearTimeout(t);
+  }, [status]);
+
+  // Only one save at a time (reordering is locked while saving), so savedIds is
+  // always the server's current order when a save starts and when it fails.
   async function save(ids: string[]) {
     const restoreTo = savedIds;
-    setSaving((n) => n + 1);
+    savingRef.current = true;
+    setSaving(true);
     setStatus('Saving…');
     try {
       const res = await reorderTeamsAction(ids);
@@ -150,13 +169,14 @@ export function TeamList({ teams }: { teams: AdminTeam[] }) {
       setOrder(restoreTo);
       setStatus('Could not save the order. Try again.');
     } finally {
-      setSaving((n) => n - 1);
+      savingRef.current = false;
+      setSaving(false);
     }
   }
 
   function move(index: number, delta: -1 | 1) {
     const target = index + delta;
-    if (target < 0 || target >= order.length) return;
+    if (savingRef.current || target < 0 || target >= order.length) return;
     const next = [...order];
     [next[index], next[target]] = [next[target], next[index]];
     setOrder(next);
@@ -164,9 +184,8 @@ export function TeamList({ teams }: { teams: AdminTeam[] }) {
   }
 
   function onReorder(next: string[]) {
-    setOrder(next);
-    // Reorder's built-in keyboard grab (Space + arrows) moves without a drag; save those too.
-    if (!draggingRef.current) void save(next);
+    // Only pointer drags (started from the handle) reorder; drag end saves.
+    if (draggingRef.current) setOrder(next);
   }
 
   function onDragStart() {
@@ -177,6 +196,7 @@ export function TeamList({ teams }: { teams: AdminTeam[] }) {
   function onDragEnd() {
     draggingRef.current = false;
     setDragging(false);
+    if (savingRef.current) return;
     if (!sameOrder(order, savedIds)) void save(order);
   }
 
@@ -194,6 +214,7 @@ export function TeamList({ teams }: { teams: AdminTeam[] }) {
               onOpen={(team) => setEditing({ team })}
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
+              locked={saving}
             />
           ))}
         </Reorder.Group>

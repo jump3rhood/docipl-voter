@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { test, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type { AdminTeam } from '@/lib/admin';
 
@@ -82,6 +82,44 @@ test('Add team opens editor titled Add team', async () => {
   await userEvent.click(screen.getByRole('button', { name: /Add team/ }));
   const dialog = await screen.findByRole('dialog');
   expect(within(dialog).getByRole('heading', { name: 'Add team' })).toBeInTheDocument();
+});
+
+test('reordering is locked while a save is in flight, so saves never overlap', async () => {
+  let resolve!: (v: { ok: true }) => void;
+  reorderTeamsAction.mockReturnValueOnce(new Promise((r) => (resolve = r)));
+  render(<TeamList teams={teams} />);
+  await userEvent.click(screen.getByRole('button', { name: 'Move Alpha Smash down' }));
+  expect(screen.getByRole('status')).toHaveTextContent('Saving…');
+  for (const b of screen.getAllByRole('button', { name: /^Move / })) expect(b).toBeDisabled();
+  // Even a direct click (e.g. a double tap before re-render) is refused.
+  fireEvent.click(screen.getByRole('button', { name: 'Move Alpha Smash up' }));
+  expect(reorderTeamsAction).toHaveBeenCalledTimes(1);
+  await act(async () => resolve({ ok: true }));
+  expect(screen.getByRole('status')).toHaveTextContent('Order saved');
+  expect(screen.getByRole('button', { name: 'Move Alpha Smash up' })).toBeEnabled();
+  expect(rowNames()).toEqual(['Bravo Dinks', 'Alpha Smash', 'Charlie Lobs']);
+});
+
+test('Order saved clears after about 3 seconds', async () => {
+  vi.useFakeTimers();
+  try {
+    reorderTeamsAction.mockResolvedValue({ ok: true });
+    render(<TeamList teams={teams} />);
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Move Alpha Smash down' }));
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('Order saved');
+    await act(async () => {
+      vi.advanceTimersByTime(2900);
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('Order saved');
+    await act(async () => {
+      vi.advanceTimersByTime(200);
+    });
+    expect(screen.getByRole('status')).toHaveTextContent('');
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 // Order matters: framer-motion's strict-mode warning is warnOnce per process, so the

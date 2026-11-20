@@ -139,3 +139,27 @@ test('add sheet uses createTeamAction, has no Show on ballot, derives slug from 
   expect(fd.get('slug')).toBe('net-ninjas-2');
   expect(fd.get('name')).toBe('Net Ninjas 2');
 });
+
+test('slug strips accents (Müller → muller)', async () => {
+  setup(null);
+  await userEvent.type(screen.getByLabelText('Name'), 'Müller Smashers');
+  expect(screen.getByLabelText('Slug')).toHaveValue('muller-smashers');
+});
+
+test('a slug error from the server opens the Advanced section', async () => {
+  updateTeamAction.mockResolvedValueOnce({ error: 'That slug is already used.' });
+  setup();
+  const details = screen.getByLabelText('Slug').closest('details')!;
+  expect(details.open).toBe(false);
+  await userEvent.click(screen.getByRole('button', { name: 'SAVE' }));
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('That slug is already used.'));
+  expect(details.open).toBe(true);
+});
+
+test('a non-slug error leaves Advanced closed', async () => {
+  updateTeamAction.mockResolvedValueOnce({ error: 'Name is required.' });
+  setup();
+  await userEvent.click(screen.getByRole('button', { name: 'SAVE' }));
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('Name is required.'));
+  expect(screen.getByLabelText('Slug').closest('details')!.open).toBe(false);
+});
