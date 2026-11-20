@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { m } from 'motion/react';
+import { LazyMotion, domMax, m } from 'motion/react';
 import { PrimaryLink, privacyLinkClass } from '@/components/PrimaryLink';
 import { TeamBadge } from '@/components/TeamBadge';
 import {
@@ -119,6 +119,7 @@ export function Leaderboard({
         <p className="mt-2 text-base font-semibold text-brand-yellow">{totalLabel(data.total)}</p>
       </div>
 
+      <LazyMotion features={domMax} strict>
       <ol className="flex flex-col gap-2">
         {data.rows.map((r) => {
           const medal = medalFor(r);
@@ -159,6 +160,7 @@ export function Leaderboard({
           );
         })}
       </ol>
+      </LazyMotion>
 
       {data.total === 0 && <p className="text-center text-white/80">No votes yet.</p>}
 
