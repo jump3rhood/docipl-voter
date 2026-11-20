@@ -11,7 +11,6 @@ async function Teams() {
   await connection();
   await requireAdmin();
   const teams = await listAllTeams();
-  const nextOrder = teams.reduce((m, t) => Math.max(m, t.displayOrder), 0) + 1;
   return (
     <div className="flex flex-col gap-8">
       <h1 className="text-2xl font-extrabold">Teams</h1>
@@ -22,12 +21,11 @@ async function Teams() {
           name={t.name}
           slug={t.slug}
           accentColor={t.accentColor}
-          displayOrder={t.displayOrder}
           logoUrl={t.logoUrl}
           isActive={t.isActive}
         />
       ))}
-      <AddTeamForm nextOrder={nextOrder} />
+      <AddTeamForm />
     </div>
   );
 }

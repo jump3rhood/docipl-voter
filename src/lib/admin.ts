@@ -73,24 +73,32 @@ export async function listAllTeams(): Promise<AdminTeam[]> {
   }));
 }
 
-export async function createTeam(t: {
-  name: string;
-  slug: string;
-  accentColor: string | null;
-  displayOrder: number;
-}): Promise<void> {
-  const { error } = await getSupabaseAdmin().from('teams').insert({
-    name: t.name,
-    slug: t.slug,
-    accent_color: t.accentColor,
-    display_order: t.displayOrder,
-  });
+export async function createTeam(t: { name: string; slug: string; accentColor: string | null }): Promise<string> {
+  const db = getSupabaseAdmin();
+  const last = await db
+    .from('teams')
+    .select('display_order')
+    .order('display_order', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (last.error) fail('createTeam', last.error);
+  const { data, error } = await db
+    .from('teams')
+    .insert({
+      name: t.name,
+      slug: t.slug,
+      accent_color: t.accentColor,
+      display_order: (last.data?.display_order ?? 0) + 1,
+    })
+    .select('id')
+    .single();
   if (error) fail('createTeam', error, { '23505': 'duplicate_slug' });
+  return data!.id as string;
 }
 
 export async function updateTeam(
   id: string,
-  t: { name: string; slug: string; accentColor: string | null; displayOrder: number; isActive: boolean },
+  t: { name: string; slug: string; accentColor: string | null; isActive: boolean },
 ): Promise<void> {
   const { data, error } = await getSupabaseAdmin()
     .from('teams')
@@ -98,13 +106,27 @@ export async function updateTeam(
       name: t.name,
       slug: t.slug,
       accent_color: t.accentColor,
-      display_order: t.displayOrder,
       is_active: t.isActive,
     })
     .eq('id', id)
     .select('id');
   if (error) fail('updateTeam', error, { '23505': 'duplicate_slug' });
   if (!data || data.length === 0) throw new Error('not_found');
+}
+
+export async function reorderTeams(ids: string[]): Promise<void> {
+  const db = getSupabaseAdmin();
+  const { data, error } = await db.from('teams').select('id');
+  if (error) fail('reorderTeams', error);
+  const current = new Set((data ?? []).map((t) => t.id as string));
+  if (ids.length !== current.size || new Set(ids).size !== ids.length || !ids.every((id) => current.has(id))) {
+    throw new Error('stale_list');
+  }
+  const results = await Promise.all(
+    ids.map((id, i) => db.from('teams').update({ display_order: i + 1 }).eq('id', id)),
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) fail('reorderTeams', failed.error);
 }
 
 export async function setTeamLogo(

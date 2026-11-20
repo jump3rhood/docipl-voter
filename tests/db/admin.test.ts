@@ -5,6 +5,7 @@ import {
   exportVotesCsvRows,
   getAdminConfig,
   listAllTeams,
+  reorderTeams,
   purgeIdentifiers,
   resetVotes,
   setTeamLogo,
@@ -83,17 +84,24 @@ test('purge keeps votes, nulls hashes, deletes voters/tokens', async () => {
 });
 
 test('create/update team round trip incl. inactive', async () => {
-  await createTeam({ name: 'ZZ Team', slug: 'zz-team', accentColor: '#112233', displayOrder: 99 });
+  await createTeam({ name: 'ZZ Team', slug: 'zz-team', accentColor: '#112233' });
   let t = (await listAllTeams()).find((x) => x.slug === 'zz-team')!;
-  expect(t).toMatchObject({ name: 'ZZ Team', accentColor: '#112233', displayOrder: 99, isActive: true, logoUrl: null });
-  await updateTeam(t.id, { name: 'ZZ Two', slug: 'zz-two', accentColor: null, displayOrder: 100, isActive: false });
+  expect(t).toMatchObject({ name: 'ZZ Team', accentColor: '#112233', isActive: true, logoUrl: null });
+  await updateTeam(t.id, { name: 'ZZ Two', slug: 'zz-two', accentColor: null, isActive: false });
   t = (await listAllTeams()).find((x) => x.id === t.id)!;
-  expect(t).toMatchObject({ name: 'ZZ Two', slug: 'zz-two', accentColor: null, displayOrder: 100, isActive: false });
+  expect(t).toMatchObject({ name: 'ZZ Two', slug: 'zz-two', accentColor: null, isActive: false });
+});
+
+test('reorderTeams throws stale_list on mismatch', async () => {
+  const ids = (await listAllTeams()).map((t) => t.id);
+  await expect(reorderTeams(ids.slice(1))).rejects.toThrow('stale_list');
+  await expect(reorderTeams([...ids, ids[0]])).rejects.toThrow('stale_list');
+  await expect(reorderTeams([ids[0], ...ids.slice(0, -1)])).rejects.toThrow('stale_list');
 });
 
 test('duplicate slug rejected', async () => {
-  await createTeam({ name: 'A', slug: 'zz-dup', accentColor: null, displayOrder: 98 });
-  await expect(createTeam({ name: 'B', slug: 'zz-dup', accentColor: null, displayOrder: 99 })).rejects.toThrow('duplicate_slug');
+  await createTeam({ name: 'A', slug: 'zz-dup', accentColor: null });
+  await expect(createTeam({ name: 'B', slug: 'zz-dup', accentColor: null })).rejects.toThrow('duplicate_slug');
 });
 
 test('updateVotingWindow rejects end before start and leaves enabled alone', async () => {
@@ -114,7 +122,7 @@ test('setTeamLogo unknown team throws not_found', async () => {
 });
 
 test('setTeamLogo uploads to team-logos and sets logo_url', async () => {
-  await createTeam({ name: 'Logo', slug: 'zz-logo', accentColor: null, displayOrder: 97 });
+  await createTeam({ name: 'Logo', slug: 'zz-logo', accentColor: null });
   const t = (await listAllTeams()).find((x) => x.slug === 'zz-logo')!;
   const png = Uint8Array.from(
     Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', 'base64'),
@@ -130,7 +138,7 @@ test('setTeamLogo uploads to team-logos and sets logo_url', async () => {
 });
 
 test('setTeamLogo rejects bad type and oversize, ignores caller slug', async () => {
-  await createTeam({ name: 'L2', slug: 'zz-l2', accentColor: null, displayOrder: 96 });
+  await createTeam({ name: 'L2', slug: 'zz-l2', accentColor: null });
   const t = (await listAllTeams()).find((x) => x.slug === 'zz-l2')!;
   await expect(setTeamLogo(t.id, { bytes: new ArrayBuffer(4), type: 'image/svg+xml', slug: 'zz-l2' })).rejects.toThrow('unsupported_type');
   await expect(setTeamLogo(t.id, { bytes: new ArrayBuffer(1024 * 1024 + 1), type: 'image/png', slug: 'zz-l2' })).rejects.toThrow('too_large');

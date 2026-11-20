@@ -14,7 +14,7 @@ vi.mock('next/navigation', () => ({
 }));
 vi.mock('next/cache', () => ({ revalidatePath: vi.fn() }));
 
-import { createTeamAction, updateTeamAction, uploadLogoAction } from '@/app/admin/(protected)/teams/actions';
+import { createTeamAction, reorderTeamsAction, updateTeamAction } from '@/app/admin/(protected)/teams/actions';
 import { signSession } from '@/lib/adminSession';
 import { getServerEnv } from '@/lib/env';
 import { getActiveTeams } from '@/lib/voting';
@@ -43,8 +43,8 @@ beforeEach(async () => {
 });
 afterEach(cleanup);
 
-const newTeam = (o: Record<string, string> = {}) =>
-  form({ name: 'ZZ Team', slug: 'zz-team', accent: '#112233', displayOrder: '99', ...o });
+const newTeam = (o: Record<string, string | Blob> = {}) =>
+  form({ name: 'ZZ Team', slug: 'zz-team', accent: '#112233', ...o });
 
 async function teamId(slug: string) {
   const { data } = await admin.from('teams').select('id').eq('slug', slug).single();
@@ -55,7 +55,7 @@ describe('team admin actions', () => {
   test('actions reject without session', async () => {
     await expect(createTeamAction(undefined, newTeam())).rejects.toThrow('REDIRECT:/admin/login');
     await expect(updateTeamAction(undefined, form({ id: 'x' }))).rejects.toThrow('REDIRECT:/admin/login');
-    await expect(uploadLogoAction(undefined, form({ id: 'x' }))).rejects.toThrow('REDIRECT:/admin/login');
+    await expect(reorderTeamsAction(['x'])).rejects.toThrow('REDIRECT:/admin/login');
     const { data } = await admin.from('teams').select('id').eq('slug', 'zz-team');
     expect(data).toEqual([]);
   });
@@ -67,7 +67,7 @@ describe('team admin actions', () => {
     const id = await teamId('zz-team');
     const r = await updateTeamAction(
       undefined,
-      form({ id, name: 'ZZ Team', slug: 'zz-team', noAccent: 'on', accent: '#000000', displayOrder: '99' }),
+      form({ id, name: 'ZZ Team', slug: 'zz-team', noAccent: 'on', accent: '#000000' }),
     );
     expect(r).toEqual({ ok: true });
     expect((await getActiveTeams()).some((t) => t.slug === 'zz-team')).toBe(false);
@@ -77,19 +77,21 @@ describe('team admin actions', () => {
 
   test('bad or unknown id gives Team not found', async () => {
     jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
-    const base = { name: 'ZZ X', slug: 'zz-x', accent: '#112233', displayOrder: '1' };
-    const png = new File([PNG], 'l.png', { type: 'image/png' });
+    const base = { name: 'ZZ X', slug: 'zz-x', accent: '#112233' };
     expect(await updateTeamAction(undefined, form({ id: 'nope', ...base }))).toEqual({ error: 'Team not found.' });
-    expect(await uploadLogoAction(undefined, form({ id: 'nope', logo: png }))).toEqual({ error: 'Team not found.' });
     const unknown = '11111111-1111-1111-1111-111111111111';
     expect(await updateTeamAction(undefined, form({ id: unknown, ...base }))).toEqual({ error: 'Team not found.' });
   });
 
-  test('upload logo unknown uuid gives Team not found', async () => {
+  test('update logo unknown uuid gives Team not found', async () => {
     jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
     const png = new File([PNG], 'l.png', { type: 'image/png' });
     const unknown = '11111111-1111-1111-1111-111111111111';
-    expect(await uploadLogoAction(undefined, form({ id: unknown, logo: png }))).toEqual({ error: 'Team not found.' });
+    const r = await updateTeamAction(
+      undefined,
+      form({ id: unknown, name: 'ZZ X', slug: 'zz-x', accent: '#112233', logo: png }),
+    );
+    expect(r).toEqual({ error: 'Team not found.' });
   });
 
   test('duplicate slug error', async () => {
@@ -108,25 +110,100 @@ describe('team admin actions', () => {
     expect(data).toEqual([]);
   });
 
-  test('upload logo sets logo_url; oversize rejected and unchanged', async () => {
+  test('update logo sets logo_url; bad type rejected and unchanged', async () => {
     jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
     await createTeamAction(undefined, newTeam());
     const id = await teamId('zz-team');
-    const r = await uploadLogoAction(undefined, form({ id, logo: new File([PNG], 'l.png', { type: 'image/png' }) }));
+    const base = { id, name: 'ZZ Team', slug: 'zz-team', accent: '#112233' };
+    const r = await updateTeamAction(undefined, form({ ...base, logo: new File([PNG], 'l.png', { type: 'image/png' }) }));
     expect(r).toEqual({ ok: true });
     const { data } = await admin.from('teams').select('logo_url').eq('id', id).single();
     expect(data!.logo_url).toMatch(/\/team-logos\/zz-team-\d+\.png$/);
     const before = data!.logo_url;
 
-    const big = new File([new Uint8Array(1024 * 1024 + 1)], 'big.png', { type: 'image/png' });
-    expect(await uploadLogoAction(undefined, form({ id, logo: big }))).toEqual({
-      error: 'Image must be 1 MB or smaller.',
-    });
     const svg = new File(['<svg/>'], 'a.svg', { type: 'image/svg+xml' });
-    expect(await uploadLogoAction(undefined, form({ id, logo: svg }))).toEqual({
+    expect(await updateTeamAction(undefined, form({ ...base, logo: svg }))).toEqual({
       error: 'Use a PNG, JPG or WEBP image.',
     });
     const after = await admin.from('teams').select('logo_url').eq('id', id).single();
     expect(after.data!.logo_url).toBe(before);
+  });
+
+  test('create puts team last', async () => {
+    jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
+    const { data: all } = await admin.from('teams').select('display_order');
+    const max = Math.max(0, ...(all ?? []).map((t) => t.display_order));
+    expect(await createTeamAction(undefined, newTeam())).toEqual({ ok: true });
+    const { data } = await admin.from('teams').select('display_order').eq('slug', 'zz-team').single();
+    expect(data!.display_order).toBe(max + 1);
+  });
+
+  test('create with logo sets logo_url', async () => {
+    jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
+    const logo = new Blob([PNG], { type: 'image/png' });
+    expect(await createTeamAction(undefined, newTeam({ logo }))).toEqual({ ok: true });
+    const { data } = await admin.from('teams').select('logo_url').eq('slug', 'zz-team').single();
+    expect(data!.logo_url).toContain('/team-logos/zz-team-');
+  });
+
+  test('create with bad logo creates nothing', async () => {
+    jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
+    const logo = new Blob(['hello'], { type: 'text/plain' });
+    const r = await createTeamAction(undefined, newTeam({ logo }));
+    expect(r).toEqual({ error: 'Use a PNG, JPG or WEBP image.' });
+    const { data } = await admin.from('teams').select('id').eq('slug', 'zz-team');
+    expect(data).toEqual([]);
+  });
+
+  test('update without logo keeps logo_url', async () => {
+    jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
+    await createTeamAction(undefined, newTeam({ logo: new Blob([PNG], { type: 'image/png' }) }));
+    const id = await teamId('zz-team');
+    const { data: before } = await admin.from('teams').select('logo_url').eq('id', id).single();
+    expect(before!.logo_url).toBeTruthy();
+    const r = await updateTeamAction(
+      undefined,
+      form({ id, name: 'ZZ Renamed', slug: 'zz-team', accent: '#112233', isActive: 'on' }),
+    );
+    expect(r).toEqual({ ok: true });
+    const { data } = await admin.from('teams').select('logo_url, name').eq('id', id).single();
+    expect(data).toEqual({ logo_url: before!.logo_url, name: 'ZZ Renamed' });
+  });
+
+  test('update with oversize logo changes nothing', async () => {
+    jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
+    await createTeamAction(undefined, newTeam());
+    const id = await teamId('zz-team');
+    const big = new Blob([new Uint8Array(1024 * 1024 + 1)], { type: 'image/png' });
+    const r = await updateTeamAction(
+      undefined,
+      form({ id, name: 'ZZ Changed', slug: 'zz-team', accent: '#112233', isActive: 'on', logo: big }),
+    );
+    expect(r).toEqual({ error: 'Image must be 1 MB or smaller.' });
+    const { data } = await admin.from('teams').select('name').eq('id', id).single();
+    expect(data!.name).toBe('ZZ Team');
+  });
+
+  test('reorder writes 1..n in given order', async () => {
+    jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
+    await createTeamAction(undefined, newTeam());
+    const { data } = await admin.from('teams').select('id').order('display_order');
+    const reversed = data!.map((t) => t.id).reverse();
+    expect(await reorderTeamsAction(reversed)).toEqual({ ok: true });
+    const { data: after } = await admin.from('teams').select('id, display_order').order('display_order');
+    expect(after!.map((t) => t.id)).toEqual(reversed);
+    expect(after!.map((t) => t.display_order)).toEqual(reversed.map((_, i) => i + 1));
+  });
+
+  test('reorder rejects stale id list', async () => {
+    jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
+    await createTeamAction(undefined, newTeam());
+    const snap = async () => (await admin.from('teams').select('id, display_order').order('id')).data;
+    const before = await snap();
+    const ids = (await admin.from('teams').select('id').order('display_order')).data!.map((t) => t.id);
+    const stale = { error: 'The team list changed. Reload and try again.' };
+    expect(await reorderTeamsAction(ids.slice(1))).toEqual(stale);
+    expect(await reorderTeamsAction([ids[0], ...ids.slice(0, -1)])).toEqual(stale);
+    expect(await snap()).toEqual(before);
   });
 });

@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useState } from 'react';
-import { createTeamAction, updateTeamAction, uploadLogoAction, type TeamState } from './actions';
+import { createTeamAction, updateTeamAction, type TeamState } from './actions';
 import { primaryButtonClass } from '@/components/PrimaryLink';
 import { TeamBadge } from '@/components/TeamBadge';
 
@@ -26,7 +26,7 @@ function Feedback({ state }: { state: TeamState }) {
   );
 }
 
-type Values = { name: string; slug: string; accentColor: string | null; displayOrder: number };
+type Values = { name: string; slug: string; accentColor: string | null};
 
 function Fields({ id, v }: { id: string; v: Values }) {
   const [noAccent, setNoAccent] = useState(v.accentColor === null);
@@ -69,28 +69,12 @@ function Fields({ id, v }: { id: string; v: Values }) {
         />
         No colour
       </label>
-      <label htmlFor={`${id}-order`} className={labelClass}>
-        Display order
-      </label>
-      <input
-        id={`${id}-order`}
-        name="displayOrder"
-        type="number"
-        inputMode="numeric"
-        min={0}
-        max={10000}
-        step={1}
-        required
-        defaultValue={v.displayOrder}
-        className={inputClass}
-      />
     </>
   );
 }
 
 export function TeamRow(props: Values & { id: string; logoUrl: string | null; isActive: boolean }) {
   const [saveState, save, saving] = useActionState(updateTeamAction, undefined);
-  const [logoState, upload, uploading] = useActionState(uploadLogoAction, undefined);
   return (
     <section
       aria-label={props.name}
@@ -113,34 +97,16 @@ export function TeamRow(props: Values & { id: string; logoUrl: string | null; is
           {saving ? 'SAVING...' : 'SAVE'}
         </button>
       </form>
-      <form action={upload} className="flex flex-col gap-3 text-left">
-        <input type="hidden" name="id" value={props.id} />
-        <label htmlFor={`${props.id}-logo`} className={labelClass}>
-          Logo (PNG, JPG or WEBP, up to 1 MB)
-        </label>
-        <input
-          id={`${props.id}-logo`}
-          name="logo"
-          type="file"
-          accept="image/png,image/jpeg,image/webp"
-          required
-          className="text-white"
-        />
-        <Feedback state={logoState} />
-        <button type="submit" disabled={uploading} className={`${primaryButtonClass} disabled:opacity-60`}>
-          {uploading ? 'UPLOADING...' : 'UPLOAD LOGO'}
-        </button>
-      </form>
     </section>
   );
 }
 
-export function AddTeamForm({ nextOrder }: { nextOrder: number }) {
+export function AddTeamForm() {
   const [state, action, pending] = useActionState(createTeamAction, undefined);
   return (
     <form action={action} className="flex flex-col gap-3 text-left">
       <h2 className="text-lg font-extrabold">Add team</h2>
-      <Fields id="new" v={{ name: '', slug: '', accentColor: null, displayOrder: nextOrder }} />
+      <Fields id="new" v={{ name: '', slug: '', accentColor: null}} />
       <Feedback state={state} />
       <button type="submit" disabled={pending} className={`${primaryButtonClass} disabled:opacity-60`}>
         {pending ? 'ADDING...' : 'ADD TEAM'}
