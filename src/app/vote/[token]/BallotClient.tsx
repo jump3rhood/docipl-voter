@@ -7,6 +7,7 @@ import { BallotForm } from '@/components/BallotForm';
 import { TurnstileWidget } from '@/components/TurnstileWidget';
 import { VerifyNotice } from '@/components/VerifyNotice';
 import { collectDeviceSignal } from '@/lib/deviceSignal';
+import { markCelebrate } from '@/lib/celebrate';
 import { postVote } from '@/lib/submitVote';
 
 export function BallotClient({
@@ -54,7 +55,10 @@ export function BallotClient({
         });
       }}
       onSubmitFailed={() => setResetSignal((n) => n + 1)}
-      onVoted={() => router.replace('/thanks')}
+      onVoted={() => {
+        markCelebrate();
+        router.replace('/thanks');
+      }}
     />
   );
 }

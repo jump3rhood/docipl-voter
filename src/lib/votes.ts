@@ -74,13 +74,20 @@ export async function castVote(a: {
 
 export async function getVoterVote(
   browserHash: string,
-): Promise<{ teamId: string; teamName: string } | null> {
+): Promise<{ teamId: string; teamName: string; accentColor: string | null } | null> {
   const { data, error } = await getSupabaseAdmin().rpc('get_voter_vote', {
     p_browser_id_hash: browserHash,
   });
   if (error) throw new Error(`get_voter_vote failed: ${error.message}`);
   const row = data?.[0];
-  return row ? { teamId: row.team_id, teamName: row.team_name } : null;
+  if (!row) return null;
+  const { data: team, error: teamError } = await getSupabaseAdmin()
+    .from('teams')
+    .select('accent_color')
+    .eq('id', row.team_id)
+    .maybeSingle();
+  if (teamError) throw new Error(`team accent lookup failed: ${teamError.message}`);
+  return { teamId: row.team_id, teamName: row.team_name, accentColor: team?.accent_color ?? null };
 }
 
 export async function getTokenState(tokenHash: string): Promise<'active' | 'used' | 'invalid'> {

@@ -4,7 +4,7 @@ import { expect, test } from 'vitest';
 import { ThankYou } from '@/components/ThankYou';
 
 test('ThankYou shows team', () => {
-  render(<ThankYou teamName="Code Red" />);
+  render(<ThankYou teamName="Code Red" accentColor="#E11D48" />);
   expect(screen.getByText('🎉 THANK YOU!')).toBeTruthy();
   expect(screen.getByText('Your vote has been recorded.')).toBeTruthy();
   expect(screen.getByText('You voted for:')).toBeTruthy();

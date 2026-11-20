@@ -4,10 +4,18 @@ import Link from 'next/link';
 import { m } from 'motion/react';
 import { Reveal } from '@/components/motion/Reveal';
 import { PrimaryLink, privacyLinkClass } from '@/components/PrimaryLink';
+import { Celebration } from '@/components/Celebration';
 
-export function ThankYou({ teamName }: { teamName: string | null }) {
+export function ThankYou({
+  teamName,
+  accentColor,
+}: {
+  teamName: string | null;
+  accentColor?: string | null;
+}) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 pb-8 text-center">
+      <Celebration colors={[accentColor ?? '#FFD21F', '#FFD21F', '#FFFFFF']} />
       <Reveal className="flex flex-col items-center gap-4">
         <m.h1
           initial={{ scale: 0.9 }}

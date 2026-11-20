@@ -40,6 +40,23 @@ describe('vote wrappers', () => {
     expect(await getTokenState(hashToken('missing'))).toBe('invalid');
   });
 
+  test('getVoterVote includes accentColor', async () => {
+    await openWindow();
+    const tokenHash = await minted('ip-d');
+    const browserHash = hashId('browser-d');
+    await castVote({
+      tokenHash,
+      teamId: await teamId('code-red'),
+      browserHash,
+      deviceHash: null,
+      ipHash: hashId('ip-d'),
+      uaHash: null,
+    });
+    const vote = await getVoterVote(browserHash);
+    expect(vote).toHaveProperty('accentColor');
+    expect(vote?.accentColor === null || /^#[0-9A-Fa-f]{6}$/.test(vote!.accentColor)).toBe(true);
+  });
+
   test('castVote maps token_used', async () => {
     await openWindow();
     const tokenHash = await minted('ip-b');

@@ -12,7 +12,7 @@ async function Thanks() {
   const id = (await cookies()).get(VOTER_COOKIE)?.value;
   const vote = id ? await getVoterVote(hashId(id)) : null;
   if (!vote) redirect('/');
-  return <ThankYou teamName={vote.teamName} />;
+  return <ThankYou teamName={vote.teamName} accentColor={vote.accentColor} />;
 }
 
 export default function ThanksPage() {
