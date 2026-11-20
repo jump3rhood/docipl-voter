@@ -14,6 +14,11 @@ describe('shouldOptimizeLogo', () => {
     expect(shouldOptimizeLogo('https://127.0.0.1/x.png')).toBe(false);
     expect(shouldOptimizeLogo('https://[::1]/x.png')).toBe(false);
   });
+  it('other https hosts or buckets are not optimized', () => {
+    expect(shouldOptimizeLogo('https://example.com/storage/v1/object/public/team-logos/x.png')).toBe(false);
+    expect(shouldOptimizeLogo('https://abc.supabase.co/storage/v1/object/public/other-bucket/x.png')).toBe(false);
+    expect(shouldOptimizeLogo('https://abc.supabase.co/x.png')).toBe(false);
+  });
   it('http, relative and garbage urls are not optimized', () => {
     expect(shouldOptimizeLogo('http://abc.supabase.co/x.png')).toBe(false);
     expect(shouldOptimizeLogo('/logos/x.png')).toBe(false);

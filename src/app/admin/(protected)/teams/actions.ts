@@ -78,7 +78,12 @@ export async function createTeamAction(_prev: TeamState, formData: FormData): Pr
     throw e;
   }
   if (logo) {
-    const err = await uploadLogo(id, logo);
+    let err: TeamState;
+    try {
+      err = await uploadLogo(id, logo);
+    } catch {
+      err = { error: 'Team created, but the logo upload failed. Edit the team to add it.' };
+    }
     if (err) {
       revalidateAll();
       return err;
@@ -127,8 +132,10 @@ export async function updateTeamAction(_prev: TeamState, formData: FormData): Pr
 
 export async function reorderTeamsAction(ids: string[]): Promise<TeamState> {
   await requireAdmin();
+  const parsed = z.array(z.guid()).max(500).safeParse(ids);
+  if (!parsed.success) return { error: 'The team list changed. Reload and try again.' };
   try {
-    await reorderTeams(ids);
+    await reorderTeams(parsed.data);
   } catch (e) {
     if (e instanceof Error && e.message === 'stale_list') {
       return { error: 'The team list changed. Reload and try again.' };

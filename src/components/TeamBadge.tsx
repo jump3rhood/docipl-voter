@@ -31,7 +31,6 @@ export function TeamBadge({
         alt=""
         width={size}
         height={size}
-        sizes={`${size}px`}
         unoptimized={!shouldOptimizeLogo(logoUrl)}
         style={{ width: size, height: size }}
         className="shrink-0 object-contain"

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 // Admin-only: domMax and Reorder (full `motion` components) must never be imported by
 // voter-facing code. The nested LazyMotion below is deliberately NOT strict, which
 // overrides the root strict provider for this subtree (Reorder renders `motion.*`).
@@ -11,7 +12,7 @@ import { reorderTeamsAction } from './actions';
 import { TeamEditorSheet } from './TeamEditorSheet';
 
 const smallButtonClass =
-  'inline-flex size-9 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow disabled:opacity-25';
+  'inline-flex size-9 items-center justify-center rounded-lg text-white/80 hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow disabled:opacity-25 aria-disabled:opacity-25';
 
 function sameOrder(a: string[], b: string[]) {
   return a.length === b.length && a.every((id, i) => id === b[i]);
@@ -95,7 +96,9 @@ function Row({
         <button
           type="button"
           aria-label={`Move ${team.name} up`}
-          disabled={locked || index === 0}
+          data-move={`${team.id}:up`}
+          disabled={index === 0}
+          aria-disabled={locked || index === 0}
           onClick={() => onMove(index, -1)}
           className={`${smallButtonClass} h-6`}
         >
@@ -104,7 +107,9 @@ function Row({
         <button
           type="button"
           aria-label={`Move ${team.name} down`}
-          disabled={locked || index === count - 1}
+          data-move={`${team.id}:down`}
+          disabled={index === count - 1}
+          aria-disabled={locked || index === count - 1}
           onClick={() => onMove(index, 1)}
           className={`${smallButtonClass} h-6`}
         >
@@ -129,6 +134,17 @@ export function TeamList({ teams }: { teams: AdminTeam[] }) {
   const savingRef = useRef(false);
   const [status, setStatus] = useState('');
   const [editing, setEditing] = useState<Editing>(null);
+  const router = useRouter();
+  const listRef = useRef<HTMLDivElement>(null);
+  // Which Move button should hold focus once the moved row has re-rendered in place.
+  const pendingFocus = useRef<string | null>(null);
+
+  useEffect(() => {
+    const key = pendingFocus.current;
+    if (!key) return;
+    pendingFocus.current = null;
+    listRef.current?.querySelector<HTMLElement>(`[data-move="${key}"]`)?.focus();
+  }, [order]);
 
   // Adopt the server's list when it revalidates, but never mid-drag or mid-save
   // (the deferred update is picked up on the first render after both finish).
@@ -161,6 +177,7 @@ export function TeamList({ teams }: { teams: AdminTeam[] }) {
       if (res?.error) {
         setOrder(restoreTo);
         setStatus(res.error);
+        router.refresh();
       } else {
         setSavedIds(ids);
         setStatus('Order saved');
@@ -168,6 +185,7 @@ export function TeamList({ teams }: { teams: AdminTeam[] }) {
     } catch {
       setOrder(restoreTo);
       setStatus('Could not save the order. Try again.');
+      router.refresh();
     } finally {
       savingRef.current = false;
       setSaving(false);
@@ -179,6 +197,11 @@ export function TeamList({ teams }: { teams: AdminTeam[] }) {
     if (savingRef.current || target < 0 || target >= order.length) return;
     const next = [...order];
     [next[index], next[target]] = [next[target], next[index]];
+    // Keep focus on the pressed button; if the row just reached the end that button
+    // becomes truly disabled, so focus the opposite Move button instead.
+    const reachedEnd = delta === -1 ? target === 0 : target === order.length - 1;
+    const dir = reachedEnd ? (delta === -1 ? 'down' : 'up') : delta === -1 ? 'up' : 'down';
+    pendingFocus.current = `${order[index]}:${dir}`;
     setOrder(next);
     void save(next);
   }
@@ -201,7 +224,7 @@ export function TeamList({ teams }: { teams: AdminTeam[] }) {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div ref={listRef} className="flex flex-col gap-4">
       <LazyMotion features={domMax}>
         <Reorder.Group axis="y" values={order} onReorder={onReorder} className="flex flex-col gap-2">
           {rows.map((t, i) => (

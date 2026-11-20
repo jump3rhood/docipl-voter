@@ -206,4 +206,31 @@ describe('team admin actions', () => {
     expect(await reorderTeamsAction([ids[0], ...ids.slice(0, -1)])).toEqual(stale);
     expect(await snap()).toEqual(before);
   });
+
+  test('reorder rejects non-array and non-guid input without changing order', async () => {
+    jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
+    await createTeamAction(undefined, newTeam());
+    const snap = async () => (await admin.from('teams').select('id, display_order').order('id')).data;
+    const before = await snap();
+    const bad = { error: 'The team list changed. Reload and try again.' };
+    expect(await reorderTeamsAction(null as unknown as string[])).toEqual(bad);
+    expect(await reorderTeamsAction(['not-a-guid'])).toEqual(bad);
+    expect(await snap()).toEqual(before);
+  });
+
+  test('create reports a logo upload failure after the team row exists', async () => {
+    jar.value = signSession(getServerEnv().ADMIN_SESSION_SECRET);
+    const adminLib = await import('@/lib/admin');
+    const spy = vi.spyOn(adminLib, 'setTeamLogo').mockRejectedValue(new Error('storage down'));
+    try {
+      const logo = new Blob([PNG], { type: 'image/png' });
+      expect(await createTeamAction(undefined, newTeam({ logo }))).toEqual({
+        error: 'Team created, but the logo upload failed. Edit the team to add it.',
+      });
+    } finally {
+      spy.mockRestore();
+    }
+    const { data } = await admin.from('teams').select('slug').eq('slug', 'zz-team');
+    expect(data).toHaveLength(1);
+  });
 });

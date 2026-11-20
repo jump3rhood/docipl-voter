@@ -4,6 +4,8 @@ import { act, fireEvent, render, screen, within, waitFor } from '@testing-librar
 import userEvent from '@testing-library/user-event';
 import type { AdminTeam } from '@/lib/admin';
 
+const refresh = vi.fn();
+vi.mock('next/navigation', () => ({ useRouter: () => ({ refresh }) }));
 const reorderTeamsAction = vi.fn();
 vi.mock('@/app/admin/(protected)/teams/actions', () => ({
   reorderTeamsAction: (ids: string[]) => reorderTeamsAction(ids),
@@ -27,6 +29,7 @@ function rowNames() {
 
 beforeEach(() => {
   reorderTeamsAction.mockReset();
+  refresh.mockReset();
   document.body.style.overflow = '';
 });
 
@@ -68,6 +71,19 @@ test('reorder error shows message and restores order', async () => {
     expect(screen.getByRole('status')).toHaveTextContent('The team list changed. Reload and try again.'),
   );
   expect(rowNames()).toEqual(['Alpha Smash', 'Bravo Dinks', 'Charlie Lobs']);
+  expect(refresh).toHaveBeenCalledTimes(1);
+});
+
+test("Move down keeps focus on that team's Move down button, or Move up once it reaches the end", async () => {
+  reorderTeamsAction.mockResolvedValue({ ok: true });
+  render(<TeamList teams={teams} />);
+  await userEvent.click(screen.getByRole('button', { name: 'Move Alpha Smash down' }));
+  await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('Order saved'));
+  expect(screen.getByRole('button', { name: 'Move Alpha Smash down' })).toHaveFocus();
+  await userEvent.click(screen.getByRole('button', { name: 'Move Alpha Smash down' }));
+  await waitFor(() => expect(rowNames()).toEqual(['Bravo Dinks', 'Charlie Lobs', 'Alpha Smash']));
+  expect(screen.getByRole('button', { name: 'Move Alpha Smash down' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Move Alpha Smash up' })).toHaveFocus();
 });
 
 test('tapping a row opens the editor titled Edit {name}', async () => {
@@ -90,13 +106,15 @@ test('reordering is locked while a save is in flight, so saves never overlap', a
   render(<TeamList teams={teams} />);
   await userEvent.click(screen.getByRole('button', { name: 'Move Alpha Smash down' }));
   expect(screen.getByRole('status')).toHaveTextContent('Saving…');
-  for (const b of screen.getAllByRole('button', { name: /^Move / })) expect(b).toBeDisabled();
+  // aria-disabled (not disabled) so the pressed button keeps keyboard focus during the save.
+  for (const b of screen.getAllByRole('button', { name: /^Move / })) expect(b).toHaveAttribute('aria-disabled', 'true');
+  expect(screen.getByRole('button', { name: 'Move Alpha Smash down' })).toHaveFocus();
   // Even a direct click (e.g. a double tap before re-render) is refused.
   fireEvent.click(screen.getByRole('button', { name: 'Move Alpha Smash up' }));
   expect(reorderTeamsAction).toHaveBeenCalledTimes(1);
   await act(async () => resolve({ ok: true }));
   expect(screen.getByRole('status')).toHaveTextContent('Order saved');
-  expect(screen.getByRole('button', { name: 'Move Alpha Smash up' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Move Alpha Smash up' })).toHaveAttribute('aria-disabled', 'false');
   expect(rowNames()).toEqual(['Bravo Dinks', 'Alpha Smash', 'Charlie Lobs']);
 });
 
