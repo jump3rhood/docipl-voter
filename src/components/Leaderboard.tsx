@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { m } from 'motion/react';
 import { PrimaryLink, privacyLinkClass } from '@/components/PrimaryLink';
 import { TeamBadge } from '@/components/TeamBadge';
 import {
@@ -123,7 +124,8 @@ export function Leaderboard({
           const medal = medalFor(r);
           const leader = r.rank === 1 && r.votes > 0;
           return (
-            <li
+            <m.li
+              layout
               key={r.teamId}
               className={`flex flex-col gap-2 rounded-2xl p-3 ${
                 leader ? 'bg-brand-yellow/15 ring-1 ring-brand-yellow' : 'bg-navy-light'
@@ -146,12 +148,14 @@ export function Leaderboard({
                 </span>
               </div>
               <div aria-hidden="true" className="h-1.5 w-full overflow-hidden rounded-full bg-navy-dark">
-                <div
+                <m.div
                   className="h-full rounded-full bg-brand-yellow"
-                  style={{ width: `${Math.min(100, Math.max(0, r.percent))}%` }}
+                  initial={{ width: 0 }}
+                  animate={{ width: `${Math.min(100, Math.max(0, r.percent))}%` }}
+                  transition={{ duration: 0.5 }}
                 />
               </div>
-            </li>
+            </m.li>
           );
         })}
       </ol>

@@ -1,3 +1,6 @@
+'use client';
+
+import { m } from 'motion/react';
 import { TeamBadge, teamInitials } from '@/components/TeamBadge';
 import type { Team } from '@/lib/voting';
 
@@ -15,7 +18,9 @@ export function TeamCard({
   disabled?: boolean;
 }) {
   return (
-    <button
+    <m.button
+      animate={{ scale: selected ? [1, 1.04, 1] : 1 }}
+      transition={{ duration: 0.25 }}
       type="button"
       role="radio"
       aria-checked={selected}
@@ -30,12 +35,14 @@ export function TeamCard({
       }`}
     >
       {selected && (
-        <span
+        <m.span
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
           aria-hidden="true"
           className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-brand-yellow text-sm font-extrabold text-navy"
         >
           ✓
-        </span>
+        </m.span>
       )}
       <TeamBadge
         name={team.name}
@@ -44,6 +51,6 @@ export function TeamCard({
         size={64}
       />
       <span className="text-sm font-semibold leading-tight">{team.name}</span>
-    </button>
+    </m.button>
   );
 }

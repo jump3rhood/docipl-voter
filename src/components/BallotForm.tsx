@@ -2,6 +2,8 @@
 
 import { useRef, useState, type ReactNode } from 'react';
 import Link from 'next/link';
+import { m } from 'motion/react';
+import { Reveal, RevealGroup, RevealItem } from '@/components/motion/Reveal';
 import type { Team } from '@/lib/voting';
 import { voteErrorMessage, type VoteErrorCode } from '@/lib/voteMessages';
 import { TeamCard } from '@/components/TeamCard';
@@ -62,36 +64,42 @@ export function BallotForm({
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="pt-6 text-center">
+      <Reveal className="pt-6 text-center">
         <h1 id="ballot-heading" className="text-2xl font-extrabold leading-tight">
           Who is the most popular team in Doc IPL?
         </h1>
         <p className="mt-2 text-white/80">Vote for your favourite team.</p>
-      </div>
+      </Reveal>
 
-      <div
+      <RevealGroup
         role="radiogroup"
         aria-labelledby="ballot-heading"
         className="grid grid-cols-2 gap-3 pb-32 pt-6"
       >
         {teams.map((team) => (
-          <TeamCard
-            key={team.id}
-            team={team}
-            selected={team.id === selectedId}
-            disabled={submitting}
-            onSelect={() => {
-              setSelectedId(team.id);
-              setError(null);
-            }}
-          />
+          <RevealItem key={team.id} className="grid">
+            <TeamCard
+              team={team}
+              selected={team.id === selectedId}
+              disabled={submitting}
+              onSelect={() => {
+                setSelectedId(team.id);
+                setError(null);
+              }}
+            />
+          </RevealItem>
         ))}
-      </div>
+      </RevealGroup>
 
       <div className="sticky bottom-0 mt-auto bg-gradient-to-t from-navy/95 via-navy/80 to-transparent pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-6">
         {footerExtra}
         {message && (
-          <div role="alert" className="mb-3 rounded-xl bg-navy-dark p-3 text-center">
+          <m.div
+            role="alert"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-3 rounded-xl bg-navy-dark p-3 text-center"
+          >
             <p className="font-bold text-brand-yellow">{message.title}</p>
             {message.body && <p className="text-sm text-white/80">{message.body}</p>}
             {error === 'token_invalid' && (
@@ -99,7 +107,7 @@ export function BallotForm({
                 Get a new ballot
               </a>
             )}
-          </div>
+          </m.div>
         )}
         {terminal ? (
           <PrimaryLink href={terminal.href}>{terminal.label}</PrimaryLink>
