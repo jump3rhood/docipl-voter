@@ -6,6 +6,7 @@ import { m } from 'motion/react';
 import { Reveal, RevealGroup, RevealItem } from '@/components/motion/Reveal';
 import type { Team } from '@/lib/voting';
 import { voteErrorMessage, type VoteErrorCode } from '@/lib/voteMessages';
+import { ConfirmVoteSheet } from '@/components/ConfirmVoteSheet';
 import { TeamCard } from '@/components/TeamCard';
 import { PrimaryLink, primaryButtonClass, privacyLinkClass } from '@/components/PrimaryLink';
 
@@ -35,6 +36,7 @@ export function BallotForm({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<VoteErrorCode | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const inFlight = useRef(false);
 
   async function handleSubmit() {
@@ -54,6 +56,7 @@ export function BallotForm({
       return;
     }
     setError(result.code);
+    setConfirmOpen(false);
     setSubmitting(false);
     inFlight.current = false;
     onSubmitFailed?.();
@@ -115,7 +118,7 @@ export function BallotForm({
         ) : (
         <button
           type="button"
-          onClick={handleSubmit}
+          onClick={() => setConfirmOpen(true)}
           disabled={!selectedId || !canSubmit || submitting}
           className={`${primaryButtonClass} gap-2 disabled:cursor-not-allowed disabled:opacity-50`}
         >
@@ -140,6 +143,13 @@ export function BallotForm({
           </Link>
         </div>
       </div>
+      <ConfirmVoteSheet
+        team={teams.find((t) => t.id === selectedId) ?? null}
+        open={confirmOpen}
+        submitting={submitting}
+        onConfirm={handleSubmit}
+        onCancel={() => setConfirmOpen(false)}
+      />
     </div>
   );
 }
