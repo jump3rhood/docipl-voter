@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
+import { Heartbeat } from '@/components/Heartbeat';
 import { usePathname } from 'next/navigation';
 
 const links = [
@@ -81,13 +83,13 @@ function Panel({ pathname, logout, onClose }: { pathname: string; logout: React.
         role="dialog"
         aria-modal="true"
         aria-label="Admin menu"
-        className={`absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col gap-1 bg-navy-light px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 text-white transition-transform duration-200 motion-reduce:transition-none ${shown ? 'translate-x-0' : '-translate-x-full'}`}
+        className={`absolute inset-y-0 right-0 flex w-72 max-w-[85%] flex-col gap-1 bg-navy-light px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 text-white transition-transform duration-200 motion-reduce:transition-none ${shown ? 'translate-x-0' : 'translate-x-full'}`}
       >
         <button
           type="button"
           aria-label="Close menu"
           onClick={onClose}
-          className="-ml-2 inline-flex min-h-11 min-w-11 items-center justify-center self-start text-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow"
+          className="-mr-2 inline-flex min-h-11 min-w-11 items-center justify-center self-end text-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow"
         >
           <span aria-hidden="true">✕</span>
         </button>
@@ -133,22 +135,39 @@ export function AdminNav({ logout }: { logout: React.ReactNode }) {
 
   return (
     <>
-      <div className="flex items-center gap-2 border-b border-white/20 px-4 py-1">
-        <button
-          ref={burgerRef}
-          type="button"
-          aria-label="Open menu"
-          aria-expanded={open}
-          aria-controls="admin-menu-panel"
-          onClick={() => setOpen(true)}
-          className="-ml-2 inline-flex min-h-11 min-w-11 items-center justify-center text-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow"
-        >
-          <span aria-hidden="true">☰</span>
-        </button>
-        <span data-testid="admin-nav-label" className="text-base font-bold">
+      <header data-admin-shell className="flex flex-col gap-3 px-4 pt-4 pb-2">
+        <div className="flex items-center justify-between">
+          <Link
+            href="/admin"
+            aria-label="Admin dashboard"
+            className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow"
+          >
+            <Image
+              src="/brand/docipl-logo-placeholder.png"
+              alt=""
+              width={172}
+              height={182}
+              priority
+              className="size-12 rounded-full object-cover"
+            />
+          </Link>
+          <button
+            ref={burgerRef}
+            type="button"
+            aria-label="Open menu"
+            aria-expanded={open}
+            aria-controls="admin-menu-panel"
+            onClick={() => setOpen(true)}
+            className="-mr-2 inline-flex min-h-11 min-w-11 items-center justify-center text-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow"
+          >
+            <span aria-hidden="true">☰</span>
+          </button>
+        </div>
+        <Heartbeat className="text-white" />
+        <p data-testid="admin-nav-label" aria-hidden="true" className="text-2xl font-extrabold">
           {current?.label ?? 'Admin'}
-        </span>
-      </div>
+        </p>
+      </header>
       {open && <Panel pathname={pathname} logout={logout} onClose={() => setOpen(false)} />}
     </>
   );

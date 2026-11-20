@@ -17,7 +17,7 @@ async function Results() {
   const [config, results] = await Promise.all([getAdminConfig(), getResults()]);
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-2xl font-extrabold">Results</h1>
+      <h1 className="sr-only">Results</h1>
       <p className="text-white/80">{totalLabel(results.total)}</p>
       <table className="w-full text-left">
         <thead>

@@ -23,7 +23,7 @@ async function Home() {
   const state = deriveVotingState(cfg, new Date());
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-extrabold">Admin</h1>
+      <h1 className="sr-only">Admin</h1>
       <div className={card}>
         <p className="text-sm text-white/70">Status</p>
         <p className="text-xl font-bold text-brand-yellow">{STATE_LABEL[state]}</p>

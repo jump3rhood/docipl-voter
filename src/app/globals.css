@@ -25,3 +25,8 @@
     animation: reveal 0.3s ease-out both;
   }
 }
+
+/* Signed-in admin pages render their own compact header (AdminNav); hide the big public one. */
+body:has([data-admin-shell]) [data-brand-header] {
+  display: none;
+}

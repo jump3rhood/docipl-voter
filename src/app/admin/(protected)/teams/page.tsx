@@ -13,7 +13,7 @@ async function Teams() {
   const teams = await listAllTeams();
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="text-2xl font-extrabold">Teams</h1>
+      <h1 className="sr-only">Teams</h1>
       <TeamList teams={teams} />
     </div>
   );

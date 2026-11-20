@@ -88,11 +88,11 @@ test('renders logout slot inside panel', async () => {
   expect(screen.getByRole('dialog')).toContainElement(screen.getByRole('button', { name: 'Log out' }));
 });
 
-test('panel is anchored to the left and starts offscreen left', async () => {
+test('panel is anchored to the right, next to the menu button', async () => {
   render(<AdminNav logout={logout} />);
   await open();
   const dialog = screen.getByRole('dialog');
-  expect(dialog.className).toContain('left-0');
-  expect(dialog.className).not.toContain('right-0');
-  expect(dialog.className).toMatch(/translate-x-0|-translate-x-full/);
+  expect(dialog.className).toContain('right-0');
+  expect(dialog.className).not.toContain('left-0');
+  expect(dialog.className).toMatch(/translate-x-0|translate-x-full/);
 });

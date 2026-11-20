@@ -3,7 +3,7 @@ import { Heartbeat } from "@/components/Heartbeat";
 
 export function BrandHeader() {
   return (
-    <header className="flex flex-col items-center gap-4 pt-8 pb-6">
+    <header data-brand-header className="flex flex-col items-center gap-4 pt-8 pb-6">
       <Image
         src="/brand/docipl-logo-placeholder.png"
         alt="Doc IPL – Doctors Indian Pickleball League"

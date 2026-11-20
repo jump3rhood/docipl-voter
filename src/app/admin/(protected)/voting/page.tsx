@@ -16,7 +16,7 @@ async function Voting() {
   const c = await getAdminConfig();
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-2xl font-extrabold">Voting</h1>
+      <h1 className="sr-only">Voting</h1>
       <form action={toggleVotingAction}>
         <input type="hidden" name="enabled" value={c.enabled ? 'false' : 'true'} />
         <ToggleButton label={c.enabled ? 'PAUSE VOTING' : 'RESUME VOTING'} />
