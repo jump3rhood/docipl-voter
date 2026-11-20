@@ -88,7 +88,7 @@ export function PickleballField() {
         allocHeight = vh;
         canvas.width = Math.round(vw * dpr);
         canvas.height = Math.round(vh * dpr);
-        // Pin the CSS size to the backing store so small viewport changes don't stretch it.
+        // Pin the CSS size to the backing store so skipped (small-shrink) reallocs don't squash it.
         canvas.style.width = `${vw}px`;
         canvas.style.height = `${vh}px`;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);

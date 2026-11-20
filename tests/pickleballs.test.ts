@@ -82,13 +82,13 @@ test('flick on exact centre pushes upward', () => {
   expect(balls[0].vy).toBeLessThan(-500);
 });
 
-test('needsRealloc skips small height-only changes (mobile URL bar)', () => {
+test('needsRealloc: any growth or width change reallocates; small shrinks do not', () => {
   expect(needsRealloc(390, 844, 390, 844)).toBe(false);
-  expect(needsRealloc(390, 844, 390, 900)).toBe(false);
   expect(needsRealloc(390, 844, 390, 790)).toBe(false);
-  expect(needsRealloc(390, 844, 390, 844 + 119)).toBe(false);
-  expect(needsRealloc(390, 844, 390, 844 + 120)).toBe(true);
-  expect(needsRealloc(390, 844, 390, 600)).toBe(true);
+  expect(needsRealloc(390, 844, 390, 844 - 119)).toBe(false);
+  expect(needsRealloc(390, 844, 390, 844 - 120)).toBe(true);
+  expect(needsRealloc(390, 844, 390, 845)).toBe(true);
+  expect(needsRealloc(390, 844, 390, 900)).toBe(true);
   expect(needsRealloc(390, 844, 844, 390)).toBe(true);
   expect(needsRealloc(390, 844, 391, 844)).toBe(true);
 });

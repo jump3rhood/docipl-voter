@@ -136,8 +136,8 @@ export function flickAt(balls: Ball[], x: number, y: number): boolean {
   return true;
 }
 
-/** Height-only changes below this are mobile URL-bar collapse/expand; no realloc. */
-const REALLOC_HEIGHT_DELTA = 120;
+/** Height shrinks below this are mobile URL-bar expand; no realloc. Any growth reallocates. */
+const REALLOC_SHRINK_DELTA = 120;
 
 export function needsRealloc(
   prevWidth: number,
@@ -145,7 +145,7 @@ export function needsRealloc(
   width: number,
   height: number,
 ): boolean {
-  return width !== prevWidth || Math.abs(height - prevHeight) >= REALLOC_HEIGHT_DELTA;
+  return width !== prevWidth || height > prevHeight || prevHeight - height >= REALLOC_SHRINK_DELTA;
 }
 
 export function ballCountFor(hardwareConcurrency: number | undefined): number {
