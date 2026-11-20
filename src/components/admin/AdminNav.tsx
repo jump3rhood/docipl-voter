@@ -29,6 +29,7 @@ function Panel({ pathname, logout, onClose }: { pathname: string; logout: React.
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     panelRef.current?.querySelector<HTMLElement>('a[href]')?.focus();
+    void panelRef.current?.offsetWidth; // force reflow so the initial offscreen style is committed before transitioning
     const raf = requestAnimationFrame(() => setShown(true));
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
@@ -68,6 +69,7 @@ function Panel({ pathname, logout, onClose }: { pathname: string; logout: React.
       <button
         type="button"
         tabIndex={-1}
+        aria-hidden="true"
         aria-label="Close"
         data-testid="admin-nav-backdrop"
         onClick={onClose}
@@ -79,13 +81,13 @@ function Panel({ pathname, logout, onClose }: { pathname: string; logout: React.
         role="dialog"
         aria-modal="true"
         aria-label="Admin menu"
-        className={`absolute inset-y-0 right-0 flex w-72 max-w-[85%] flex-col gap-1 bg-navy-light px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 text-white transition-transform duration-200 motion-reduce:transition-none ${shown ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col gap-1 bg-navy-light px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3 text-white transition-transform duration-200 motion-reduce:transition-none ${shown ? 'translate-x-0' : '-translate-x-full'}`}
       >
         <button
           type="button"
           aria-label="Close menu"
           onClick={onClose}
-          className="-mr-2 inline-flex min-h-11 min-w-11 items-center justify-center self-end text-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow"
+          className="-ml-2 inline-flex min-h-11 min-w-11 items-center justify-center self-start text-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow"
         >
           <span aria-hidden="true">✕</span>
         </button>
@@ -131,10 +133,7 @@ export function AdminNav({ logout }: { logout: React.ReactNode }) {
 
   return (
     <>
-      <div className="flex items-center justify-between border-b border-white/20 px-4 py-1">
-        <span data-testid="admin-nav-label" className="text-base font-bold">
-          {current?.label ?? 'Admin'}
-        </span>
+      <div className="flex items-center gap-2 border-b border-white/20 px-4 py-1">
         <button
           ref={burgerRef}
           type="button"
@@ -142,10 +141,13 @@ export function AdminNav({ logout }: { logout: React.ReactNode }) {
           aria-expanded={open}
           aria-controls="admin-menu-panel"
           onClick={() => setOpen(true)}
-          className="-mr-2 inline-flex min-h-11 min-w-11 items-center justify-center text-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow"
+          className="-ml-2 inline-flex min-h-11 min-w-11 items-center justify-center text-2xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow"
         >
           <span aria-hidden="true">☰</span>
         </button>
+        <span data-testid="admin-nav-label" className="text-base font-bold">
+          {current?.label ?? 'Admin'}
+        </span>
       </div>
       {open && <Panel pathname={pathname} logout={logout} onClose={() => setOpen(false)} />}
     </>
