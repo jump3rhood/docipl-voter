@@ -69,7 +69,7 @@ test('zero votes: no medals', () => {
 
 test('subheading by state', () => {
   const { unmount } = render(<Leaderboard initial={payload} state="open" fetchImpl={never} />);
-  expect(screen.getByText('Live results · updates every 15 seconds')).toBeInTheDocument();
+  expect(screen.getByText('Live results · updates every 30 seconds')).toBeInTheDocument();
   const link = screen.getByRole('link', { name: 'VOTE NOW' });
   expect(link).toHaveAttribute('href', '/v');
   expect(link.tagName).toBe('A');
@@ -84,7 +84,7 @@ test('polls and updates', async () => {
   const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => next }) as Response);
   render(<Leaderboard initial={payload} state="open" fetchImpl={fetchImpl as unknown as typeof fetch} />);
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(15000);
+    await vi.advanceTimersByTimeAsync(30000);
   });
   expect(fetchImpl).toHaveBeenCalled();
   expect(screen.getByText('9 votes cast')).toBeInTheDocument();
@@ -96,7 +96,7 @@ test('poll failure keeps data', async () => {
   });
   render(<Leaderboard initial={payload} state="open" fetchImpl={fetchImpl as unknown as typeof fetch} />);
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(15000);
+    await vi.advanceTimersByTimeAsync(30000);
   });
   expect(fetchImpl).toHaveBeenCalled();
   expect(screen.getByText('Code Red')).toBeInTheDocument();
@@ -156,7 +156,7 @@ test('resolving polls: exactly one fetch per interval, each applied', async () =
   const f = deferredFetch((n) => ({ ...payload, total: 100 + n }));
   render(<Leaderboard initial={payload} state="open" fetchImpl={f.impl} />);
   for (let i = 1; i <= 4; i++) {
-    await advance(15000);
+    await advance(30000);
     await f.resolveAll();
     expect(screen.getByText(`${100 + i} votes cast`)).toBeInTheDocument();
   }
@@ -175,7 +175,7 @@ test('StrictMode: one fetch per interval', async () => {
     </StrictMode>,
   );
   for (let i = 1; i <= 3; i++) {
-    await advance(15000);
+    await advance(30000);
     expect(f.fn).toHaveBeenCalledTimes(i);
     await f.resolveAll();
   }
@@ -184,7 +184,7 @@ test('StrictMode: one fetch per interval', async () => {
 test('hidden→visible during an in-flight poll does not fork the loop', async () => {
   const f = deferredFetch();
   render(<Leaderboard initial={payload} state="open" fetchImpl={f.impl} />);
-  await advance(15000);
+  await advance(30000);
   expect(f.fn).toHaveBeenCalledTimes(1);
   act(() => {
     hide();
@@ -192,9 +192,9 @@ test('hidden→visible during an in-flight poll does not fork the loop', async (
   });
   expect(f.fn).toHaveBeenCalledTimes(2);
   await f.resolveAll();
-  await advance(15000);
+  await advance(30000);
   await f.resolveAll();
-  await advance(15000);
+  await advance(30000);
   await f.resolveAll();
   expect(f.fn).toHaveBeenCalledTimes(4);
 });
@@ -202,15 +202,15 @@ test('hidden→visible during an in-flight poll does not fork the loop', async (
 test('visible→visible event during an in-flight poll does not fork the loop', async () => {
   const f = deferredFetch();
   render(<Leaderboard initial={payload} state="open" fetchImpl={f.impl} />);
-  await advance(15000);
+  await advance(30000);
   act(() => {
     show();
   });
   expect(f.fn).toHaveBeenCalledTimes(2);
   await f.resolveAll();
-  await advance(15000);
+  await advance(30000);
   await f.resolveAll();
-  await advance(15000);
+  await advance(30000);
   await f.resolveAll();
   expect(f.fn).toHaveBeenCalledTimes(4);
 });
@@ -219,7 +219,7 @@ test('unmount with a fetch in flight stops polling without warnings', async () =
   const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   const f = deferredFetch();
   const { unmount } = render(<Leaderboard initial={payload} state="open" fetchImpl={f.impl} />);
-  await advance(15000);
+  await advance(30000);
   expect(f.fn).toHaveBeenCalledTimes(1);
   unmount();
   await f.resolveAll();
@@ -236,7 +236,7 @@ test('hidden skips fetches; resumes on next tick once visible even without an ev
   await advance(30000);
   expect(f.fn).toHaveBeenCalledTimes(0);
   setVisibility('visible');
-  await advance(15000);
+  await advance(30000);
   expect(f.fn).toHaveBeenCalledTimes(1);
 });
 
@@ -247,7 +247,7 @@ test('malformed payload is ignored without crashing', async () => {
   };
   const fetchImpl = vi.fn(async () => ({ ok: true, json: async () => bad }) as Response);
   render(<Leaderboard initial={payload} state="open" fetchImpl={fetchImpl as unknown as typeof fetch} />);
-  await advance(15000);
+  await advance(30000);
   expect(fetchImpl).toHaveBeenCalledTimes(1);
   expect(screen.getByText('4 votes cast')).toBeInTheDocument();
   expect(screen.getByText('Code Red')).toBeInTheDocument();

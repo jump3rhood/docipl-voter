@@ -18,7 +18,7 @@ import type { VotingState } from '@/lib/votingState';
 const loadDomMax = () => import('@/lib/motionFeaturesMax').then((r) => r.default);
 
 function subheading(state: VotingState): string {
-  if (state === 'open') return 'Live results · updates every 15 seconds';
+  if (state === 'open') return 'Live results · updates every 30 seconds';
   if (state === 'closed') return 'Final results';
   return 'Results';
 }
@@ -50,7 +50,7 @@ function isPayload(x: unknown): x is ResultsPayload {
 export function Leaderboard({
   initial,
   state,
-  pollMs = 15000,
+  pollMs = 30000,
   fetchImpl,
 }: {
   initial: ResultsPayload;
