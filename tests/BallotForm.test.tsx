@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { test, expect, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BallotForm, type SubmitResult } from '@/components/BallotForm';
 import type { Team } from '@/lib/voting';
@@ -237,18 +237,28 @@ test('focus returns to CAST button after Change my pick', async () => {
   expect(cast).toHaveFocus();
 });
 
-test('YES shows Verifying… while canSubmit is false and recovers', async () => {
+test('canSubmit turning false while the sheet is open closes it so Turnstile is reachable', async () => {
   const submit = okSubmit();
   const { rerender } = render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);
   await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
   await userEvent.click(voteButton());
   await screen.findByRole('dialog');
   rerender(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} canSubmit={false} />);
-  const dialog = screen.getByRole('dialog');
-  const yes = within(dialog).getByRole('button', { name: /verifying/i });
-  expect(yes).toBeDisabled();
-  await userEvent.click(yes);
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  expect(screen.getByRole('button', { name: /verifying/i })).toBeDisabled();
   expect(submit).not.toHaveBeenCalled();
   rerender(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} canSubmit />);
-  expect(screen.getByRole('button', { name: /yes, cast my vote/i })).toBeEnabled();
+  expect(voteButton()).toBeEnabled();
+  expect(screen.queryByRole('dialog')).toBeNull();
+});
+
+test('terminal error moves focus to the error alert when the sheet closes', async () => {
+  const submit = vi.fn(async (): Promise<SubmitResult> => ({ ok: false, code: 'already_voted' }));
+  render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);
+  await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
+  await castAndConfirm();
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  const alert = screen.getByRole('alert');
+  expect(alert).toHaveAttribute('tabindex', '-1');
+  await waitFor(() => expect(alert).toHaveFocus());
 });

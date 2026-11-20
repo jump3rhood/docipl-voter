@@ -13,13 +13,21 @@ type Props = {
   submitting: boolean;
   canSubmit?: boolean;
   returnFocusRef?: RefObject<HTMLElement | null>;
+  /** id of an element (e.g. the ballot error alert) to focus if no return target is usable. */
+  fallbackFocusId?: string;
   onConfirm: () => void;
   onCancel: () => void;
 };
 
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-function Sheet({ team, submitting, canSubmit = true, returnFocusRef, onConfirm, onCancel }: Omit<Props, 'open'> & { team: Team }) {
+function tryFocus(el: HTMLElement | null | undefined): boolean {
+  if (!el?.isConnected) return false;
+  el.focus?.();
+  return document.activeElement === el;
+}
+
+function Sheet({ team, submitting, canSubmit = true, returnFocusRef, fallbackFocusId, onConfirm, onCancel }: Omit<Props, 'open'> & { team: Team }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const yesRef = useRef<HTMLButtonElement>(null);
   const submittingRef = useRef(submitting);
@@ -37,10 +45,10 @@ function Sheet({ team, submitting, canSubmit = true, returnFocusRef, onConfirm, 
     yesRef.current?.focus();
     return () => {
       document.body.style.overflow = prevOverflow;
-      const target = returnEl ?? opener;
-      if (target?.isConnected) target.focus?.();
+      if (tryFocus(returnEl) || tryFocus(opener)) return;
+      if (fallbackFocusId) tryFocus(document.getElementById(fallbackFocusId));
     };
-  }, [returnFocusRef]);
+  }, [returnFocusRef, fallbackFocusId]);
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {

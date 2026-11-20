@@ -17,6 +17,8 @@ const ConfirmVoteSheet = dynamic(
 );
 const prewarmSheet = () => void import('@/components/ConfirmVoteSheet');
 
+const ERROR_ID = 'ballot-error';
+
 const TERMINAL: Partial<Record<VoteErrorCode, { label: string; href: string }>> = {
   already_voted: { label: 'VIEW LIVE RESULTS', href: '/results' },
   voting_closed: { label: 'VIEW FINAL RESULTS', href: '/results' },
@@ -46,6 +48,14 @@ export function BallotForm({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const inFlight = useRef(false);
   const castRef = useRef<HTMLButtonElement>(null);
+  const [prevCanSubmit, setPrevCanSubmit] = useState(canSubmit);
+
+  // If verification is lost while the sheet is open (e.g. Turnstile wants an
+  // interactive challenge in the footer), close the sheet so it isn't covered.
+  if (prevCanSubmit !== canSubmit) {
+    setPrevCanSubmit(canSubmit);
+    if (!canSubmit && confirmOpen && !submitting) setConfirmOpen(false);
+  }
 
   async function handleSubmit() {
     if (!selectedId || !canSubmit || inFlight.current) return;
@@ -108,7 +118,9 @@ export function BallotForm({
         {message && (
           <m.div
             key={error}
+            id={ERROR_ID}
             role="alert"
+            tabIndex={-1}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             className="mb-3 rounded-xl bg-navy-dark p-3 text-center"
@@ -160,6 +172,7 @@ export function BallotForm({
           submitting={submitting}
           canSubmit={canSubmit}
           returnFocusRef={castRef}
+          fallbackFocusId={ERROR_ID}
           onConfirm={handleSubmit}
           onCancel={() => setConfirmOpen(false)}
         />
