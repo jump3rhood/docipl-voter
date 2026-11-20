@@ -131,7 +131,7 @@ export function Leaderboard({
               layout
               key={r.teamId}
               className={`flex flex-col gap-2 rounded-2xl p-3 ${
-                leader ? 'bg-brand-yellow/15 ring-1 ring-brand-yellow' : 'bg-navy-light'
+                leader ? 'bg-[color-mix(in_srgb,var(--color-brand-yellow)_15%,var(--color-navy))] ring-1 ring-brand-yellow' : 'bg-navy-light'
               }`}
             >
               <div className="flex items-center gap-3">
@@ -152,9 +152,9 @@ export function Leaderboard({
               </div>
               <div aria-hidden="true" className="h-1.5 w-full overflow-hidden rounded-full bg-navy-dark">
                 <m.div
-                  className="h-full rounded-full bg-brand-yellow"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${Math.min(100, Math.max(0, r.percent))}%` }}
+                  className="h-full w-full origin-left rounded-full bg-brand-yellow"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: Math.min(100, Math.max(0, r.percent)) / 100 }}
                   transition={{ duration: 0.5 }}
                 />
               </div>
