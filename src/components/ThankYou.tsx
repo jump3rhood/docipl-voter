@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { m } from 'framer-motion';
 import { Reveal } from '@/components/motion/Reveal';
 import { PrimaryLink, privacyLinkClass } from '@/components/PrimaryLink';
 import { Celebration } from '@/components/Celebration';
@@ -17,14 +16,7 @@ export function ThankYou({
     <div className="flex flex-1 flex-col items-center justify-center gap-4 pb-8 text-center">
       <Celebration colors={[accentColor ?? '#FFD21F', '#FFD21F', '#FFFFFF']} />
       <Reveal className="flex flex-col items-center gap-4">
-        <m.h1
-          initial={{ scale: 0.9 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 0.3, ease: 'easeOut' }}
-          className="text-3xl font-extrabold leading-tight"
-        >
-          🎉 THANK YOU!
-        </m.h1>
+        <h1 className="text-3xl font-extrabold leading-tight">🎉 THANK YOU!</h1>
         <p className="text-base">Your vote has been recorded.</p>
       </Reveal>
       {teamName && (

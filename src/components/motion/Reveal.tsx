@@ -1,9 +1,19 @@
-'use client';
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  type ComponentPropsWithoutRef,
+  type CSSProperties,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
-import { m, type Variants } from 'framer-motion';
+// Pure-CSS reveal (see `.reveal` in globals.css): server HTML stays visible until
+// the animation runs, and reduced-motion users get static content.
 
-const TRANSITION = { duration: 0.3, ease: 'easeOut' } as const;
+const cx = (...c: (string | undefined)[]) => c.filter(Boolean).join(' ');
+const delayStyle = (delay: number): CSSProperties | undefined =>
+  delay > 0 ? { animationDelay: `${delay}s` } : undefined;
 
 export function Reveal({
   children,
@@ -16,22 +26,21 @@ export function Reveal({
   as?: 'div' | 'section' | 'li';
   className?: string;
 }) {
-  const Comp = m[as];
+  const Comp = as;
   return (
-    <Comp
-      className={className}
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ ...TRANSITION, delay }}
-    >
+    <Comp className={cx('reveal', className)} style={delayStyle(delay)}>
       {children}
     </Comp>
   );
 }
 
-const itemVariants: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: TRANSITION },
+type RevealItemProps = {
+  children: ReactNode;
+  className?: string;
+  /** Position within a RevealGroup; injected by the group. */
+  index?: number;
+  /** Seconds between items; injected by the group. */
+  stagger?: number;
 };
 
 export function RevealGroup({
@@ -44,27 +53,22 @@ export function RevealGroup({
   stagger?: number;
   className?: string;
 } & Omit<ComponentPropsWithoutRef<'div'>, 'children' | 'className'>) {
-  const variants: Variants = {
-    hidden: {},
-    show: { transition: { staggerChildren: stagger } },
-  };
+  let index = 0;
   return (
-    <m.div
-      {...(rest as object)}
-      className={className}
-      variants={variants}
-      initial="hidden"
-      animate="show"
-    >
-      {children}
-    </m.div>
+    <div {...rest} className={className}>
+      {Children.map(children, (child) =>
+        isValidElement(child) && child.type === RevealItem
+          ? cloneElement(child as ReactElement<RevealItemProps>, { index: index++, stagger })
+          : child,
+      )}
+    </div>
   );
 }
 
-export function RevealItem({ children, className }: { children: ReactNode; className?: string }) {
+export function RevealItem({ children, className, index = 0, stagger = 0.04 }: RevealItemProps) {
   return (
-    <m.div className={className} variants={itemVariants}>
+    <div className={cx('reveal', className)} style={delayStyle(index * stagger)}>
       {children}
-    </m.div>
+    </div>
   );
 }
