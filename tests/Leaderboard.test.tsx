@@ -252,3 +252,14 @@ test('malformed payload is ignored without crashing', async () => {
   expect(screen.getByText('4 votes cast')).toBeInTheDocument();
   expect(screen.getByText('Code Red')).toBeInTheDocument();
 });
+
+test('VOTE NOW shows while open, hidden once this browser has voted or voting closed', () => {
+  const { unmount } = render(<Leaderboard initial={payload} state="open" fetchImpl={never} />);
+  expect(screen.getByText('VOTE NOW')).toBeInTheDocument();
+  unmount();
+  const voted = render(<Leaderboard initial={payload} state="open" hasVoted fetchImpl={never} />);
+  expect(screen.queryByText('VOTE NOW')).not.toBeInTheDocument();
+  voted.unmount();
+  render(<Leaderboard initial={payload} state="closed" fetchImpl={never} />);
+  expect(screen.queryByText('VOTE NOW')).not.toBeInTheDocument();
+});

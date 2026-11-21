@@ -50,11 +50,14 @@ function isPayload(x: unknown): x is ResultsPayload {
 export function Leaderboard({
   initial,
   state,
+  hasVoted = false,
   pollMs = 30000,
   fetchImpl,
 }: {
   initial: ResultsPayload;
   state: VotingState;
+  /** This browser already voted, so there is nothing to vote for. */
+  hasVoted?: boolean;
   pollMs?: number;
   fetchImpl?: typeof fetch;
 }) {
@@ -167,7 +170,7 @@ export function Leaderboard({
       {data.total === 0 && <p className="text-center text-white/80">No votes yet.</p>}
 
       <div className="mt-2 flex flex-col items-center gap-2">
-        {state === 'open' && <PrimaryLink href="/v" plain>VOTE NOW</PrimaryLink>}
+        {state === 'open' && !hasVoted && <PrimaryLink href="/v" plain>VOTE NOW</PrimaryLink>}
         <Link href="/privacy" className={privacyLinkClass}>
           Privacy
         </Link>
