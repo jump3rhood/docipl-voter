@@ -34,7 +34,14 @@ async function Ballot({ params }: { params: Promise<{ token: string }> }) {
       </div>
     );
   }
-  return <BallotClient token={token} teams={teams} siteKey={getServerEnv().TURNSTILE_SITE_KEY} />;
+  return (
+    <BallotClient
+      token={token}
+      teams={teams}
+      siteKey={getServerEnv().TURNSTILE_SITE_KEY}
+      voterId={id ?? null}
+    />
+  );
 }
 
 export default function VotePage({ params }: { params: Promise<{ token: string }> }) {
