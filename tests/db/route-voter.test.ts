@@ -85,5 +85,5 @@ describe('POST /api/voter', () => {
       if (last.status === 429) break;
     }
     expect(last?.status).toBe(429);
-  });
+  }, 60_000); // ~120 sequential requests before the limit trips
 });
