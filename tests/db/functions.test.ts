@@ -286,7 +286,7 @@ test('get_results ranks, percents, includes zero-vote teams, excludes inactive',
   const rows = data as Row[];
   expect(rows).toHaveLength(10);
   expect(rows.map(r => r.slug)).not.toContain('dinking-dragons');
-  expect(rows[0]).toMatchObject({ slug: 'jager-shots', name: 'Jager Shots', rank: 1, votes: 3, percent: 75.0, accent_color: '#22C55E' });
+  expect(rows[0]).toMatchObject({ slug: 'jager-shots', name: 'Jäger Shots', rank: 1, votes: 3, percent: 75.0, accent_color: '#22C55E' });
   expect(rows[0].team_id).toBe(await teamId('jager-shots'));
   expect(rows[1]).toMatchObject({ slug: 'code-blue', rank: 2, votes: 1, percent: 25.0 });
   const zero = rows.slice(2);

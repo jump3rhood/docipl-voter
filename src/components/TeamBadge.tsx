@@ -32,8 +32,9 @@ export function TeamBadge({
         width={size}
         height={size}
         unoptimized={!shouldOptimizeLogo(logoUrl)}
-        style={{ width: size, height: size }}
-        className="shrink-0 object-contain"
+        // Rounded square: a circle would clip text near the edges of the square logos.
+        style={{ width: size, height: size, borderRadius: Math.round(size * 0.2) }}
+        className="shrink-0 object-cover ring-1 ring-white/15"
       />
     );
   }

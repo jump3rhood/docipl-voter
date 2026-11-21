@@ -140,15 +140,16 @@ export function AdminNav({ logout }: { logout: React.ReactNode }) {
           <Link
             href="/admin"
             aria-label="Admin dashboard"
-            className="rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow"
+            className="rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-yellow"
           >
             <Image
-              src="/brand/docipl-logo-placeholder.png"
+              src="/brand/docipl-logo.webp"
               alt=""
-              width={172}
-              height={182}
+              width={512}
+              height={512}
+              sizes="48px"
               priority
-              className="size-12 rounded-full object-cover"
+              className="size-12 rounded-xl object-cover ring-1 ring-white/15"
             />
           </Link>
           <button
