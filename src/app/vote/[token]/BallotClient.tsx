@@ -9,17 +9,22 @@ import { VerifyNotice } from '@/components/VerifyNotice';
 import { collectDeviceSignal } from '@/lib/deviceSignal';
 import { markCelebrate } from '@/lib/celebrate';
 import { postVote } from '@/lib/submitVote';
+import { useVoterIdSync } from '@/lib/useVoterIdSync';
 
 export function BallotClient({
   token,
   teams,
   siteKey,
+  voterId,
 }: {
   token: string;
   teams: Team[];
   siteKey: string;
+  voterId: string | null;
 }) {
   const router = useRouter();
+  // Hold the vote until a cleared cookie has been restored from the localStorage backup.
+  const voterIdReady = useVoterIdSync(voterId);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
   const [verifyStuck, setVerifyStuck] = useState(false);
@@ -28,7 +33,7 @@ export function BallotClient({
   return (
     <BallotForm
       teams={teams}
-      canSubmit={turnstileToken !== null}
+      canSubmit={turnstileToken !== null && voterIdReady}
       footerExtra={
         <>
           <TurnstileWidget

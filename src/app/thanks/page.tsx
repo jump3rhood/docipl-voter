@@ -3,6 +3,7 @@ import { connection } from 'next/server';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { ThankYou } from '@/components/ThankYou';
+import { VoterIdSync } from '@/components/VoterIdSync';
 import { VOTER_COOKIE } from '@/lib/voterCookie';
 import { hashId } from '@/lib/identity';
 import { getVoterVote } from '@/lib/votes';
@@ -12,7 +13,12 @@ async function Thanks() {
   const id = (await cookies()).get(VOTER_COOKIE)?.value;
   const vote = id ? await getVoterVote(hashId(id)) : null;
   if (!vote) redirect('/');
-  return <ThankYou teamName={vote.teamName} accentColor={vote.accentColor} />;
+  return (
+    <>
+      <VoterIdSync currentId={id ?? null} voted />
+      <ThankYou teamName={vote.teamName} accentColor={vote.accentColor} />
+    </>
+  );
 }
 
 export default function ThanksPage() {
