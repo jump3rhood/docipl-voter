@@ -22,7 +22,7 @@ vi.mock('@/lib/results', async (importActual) => {
 });
 
 import { GET } from '@/app/api/results/route';
-import { resetData } from './helpers';
+import { admin, resetData } from './helpers';
 
 beforeEach(async () => {
   failure.on = false;
@@ -58,6 +58,15 @@ describe('GET /api/results', () => {
         ['accentColor', 'logoUrl', 'name', 'percent', 'rank', 'slug', 'teamId', 'votes'].sort(),
       );
     }
+  });
+
+  test('public results: anyone gets them, CDN-cacheable', async () => {
+    auth.admin = false;
+    await admin.from('voting_config').update({ results_public: true }).eq('id', 1);
+    const res = await GET();
+    expect(res.status).toBe(200);
+    expect(res.headers.get('cache-control')).toBe('public, s-maxage=10, stale-while-revalidate=5');
+    expect((await res.json()).rows).toHaveLength(11);
   });
 
   test('500 on failure', async () => {

@@ -95,6 +95,17 @@ test.each([
   await waitFor(() => expect(screen.queryByRole('button', { name: /cast my vote|submitting/i })).toBeNull());
 });
 
+test.each([
+  ['already_voted', 'VIEW LIVE RESULTS'],
+  ['voting_closed', 'VIEW FINAL RESULTS'],
+] as const)('%s links to results when results are public', async (code, label) => {
+  const submit = vi.fn(async (): Promise<SubmitResult> => ({ ok: false, code }));
+  render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} resultsPublic />);
+  await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
+  await castAndConfirm();
+  expect(await screen.findByRole('link', { name: label })).toHaveAttribute('href', '/results');
+});
+
 test('retryable errors keep the cast button', async () => {
   const submit = vi.fn(async (): Promise<SubmitResult> => ({ ok: false, code: 'rate_limited' }));
   render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);

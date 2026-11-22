@@ -12,6 +12,14 @@ test('ThankYou shows team', () => {
   expect(screen.queryByRole('link', { name: /results/i })).toBeNull();
 });
 
+test('ThankYou shows a results link only when results are public', () => {
+  const { unmount } = render(<ThankYou teamName={null} results="live" />);
+  expect(screen.getByRole('link', { name: 'VIEW LIVE RESULTS' }).getAttribute('href')).toBe('/results');
+  unmount();
+  render(<ThankYou teamName={null} results="final" />);
+  expect(screen.getByRole('link', { name: 'VIEW FINAL RESULTS' }).getAttribute('href')).toBe('/results');
+});
+
 test('ThankYou without team', () => {
   render(<ThankYou teamName={null} />);
   expect(screen.queryByText('You voted for:')).toBeNull();

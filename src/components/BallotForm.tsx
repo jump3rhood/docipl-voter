@@ -19,10 +19,17 @@ const prewarmSheet = () => void import('@/components/ConfirmVoteSheet');
 
 const ERROR_ID = 'ballot-error';
 
-const TERMINAL: Partial<Record<VoteErrorCode, { label: string; href: string }>> = {
+type Escape = { label: string; href: string };
+const TERMINAL: Partial<Record<VoteErrorCode, Escape>> = {
   already_voted: { label: 'SEE YOUR VOTE', href: '/thanks' },
   voting_closed: { label: 'Back to home', href: '/' },
   voting_not_open: { label: 'Back to home', href: '/' },
+};
+// Used instead when an admin has made results public.
+const TERMINAL_PUBLIC: Partial<Record<VoteErrorCode, Escape>> = {
+  ...TERMINAL,
+  already_voted: { label: 'VIEW LIVE RESULTS', href: '/results' },
+  voting_closed: { label: 'VIEW FINAL RESULTS', href: '/results' },
 };
 
 export type SubmitResult = { ok: true; teamName: string } | { ok: false; code: VoteErrorCode };
@@ -34,6 +41,7 @@ export function BallotForm({
   canSubmit = true,
   onSubmitFailed,
   footerExtra,
+  resultsPublic = false,
 }: {
   teams: Team[];
   submit: (teamId: string) => Promise<SubmitResult>;
@@ -41,6 +49,7 @@ export function BallotForm({
   canSubmit?: boolean;
   onSubmitFailed?: () => void;
   footerExtra?: ReactNode;
+  resultsPublic?: boolean;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -80,7 +89,7 @@ export function BallotForm({
     onSubmitFailed?.();
   }
 
-  const terminal = error ? TERMINAL[error] : undefined;
+  const terminal = error ? (resultsPublic ? TERMINAL_PUBLIC : TERMINAL)[error] : undefined;
   const message = error ? voteErrorMessage(error) : null;
 
   return (

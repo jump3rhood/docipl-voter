@@ -7,16 +7,21 @@ import { VoterIdSync } from '@/components/VoterIdSync';
 import { VOTER_COOKIE } from '@/lib/voterCookie';
 import { hashId } from '@/lib/identity';
 import { getVoterVote } from '@/lib/votes';
+import { getVotingStatus } from '@/lib/voting';
 
 async function Thanks() {
   await connection();
   const id = (await cookies()).get(VOTER_COOKIE)?.value;
-  const vote = id ? await getVoterVote(hashId(id)) : null;
+  const [vote, { state, resultsPublic }] = await Promise.all([
+    id ? getVoterVote(hashId(id)) : null,
+    getVotingStatus(),
+  ]);
   if (!vote) redirect('/');
+  const results = resultsPublic ? (state === 'closed' ? 'final' : 'live') : null;
   return (
     <>
       <VoterIdSync currentId={id ?? null} voted />
-      <ThankYou teamName={vote.teamName} accentColor={vote.accentColor} />
+      <ThankYou teamName={vote.teamName} accentColor={vote.accentColor} results={results} />
     </>
   );
 }

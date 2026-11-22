@@ -2,15 +2,18 @@
 
 import Link from 'next/link';
 import { Reveal } from '@/components/motion/Reveal';
-import { privacyLinkClass } from '@/components/PrimaryLink';
+import { PrimaryLink, privacyLinkClass } from '@/components/PrimaryLink';
 import { Celebration } from '@/components/Celebration';
 
 export function ThankYou({
   teamName,
   accentColor,
+  results = null,
 }: {
   teamName: string | null;
   accentColor?: string | null;
+  /** Results link to show, only when an admin has made results public. */
+  results?: 'live' | 'final' | null;
 }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 pb-8 text-center">
@@ -26,6 +29,11 @@ export function ThankYou({
             <p className="text-xl font-bold text-brand-yellow">{teamName}</p>
           </div>
         </Reveal>
+      )}
+      {results && (
+        <PrimaryLink href="/results">
+          {results === 'final' ? 'VIEW FINAL RESULTS' : 'VIEW LIVE RESULTS'}
+        </PrimaryLink>
       )}
       <Link href="/privacy" className={privacyLinkClass}>
         Privacy

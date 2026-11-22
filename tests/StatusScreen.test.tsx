@@ -30,6 +30,13 @@ test('closed does not link to results', () => {
   expect(screen.getByText('Thank you to everyone who participated!')).toBeInTheDocument();
   expect(screen.queryByRole('link', { name: /results/i })).toBeNull();
 });
+test('results link appears when results are public', () => {
+  const { unmount } = render(<StatusScreen state="closed" startLabel="x" showResults />);
+  expect(screen.getByRole('link', { name: 'VIEW FINAL RESULTS' })).toHaveAttribute('href', '/results');
+  unmount();
+  render(<StatusScreen state="open" startLabel="x" showResults />);
+  expect(screen.getByRole('link', { name: 'VIEW LIVE RESULTS' })).toHaveAttribute('href', '/results');
+});
 test('paused copy', () => {
   render(<StatusScreen state="paused" startLabel="x" />);
   expect(screen.getByText('Voting is paused.')).toBeInTheDocument();

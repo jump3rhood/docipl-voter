@@ -17,9 +17,9 @@ export const metadata = { title: "Vote — Doc IPL People's Choice" };
 async function Ballot({ params }: { params: Promise<{ token: string }> }) {
   await connection();
   const { token } = await params;
-  const { state, start } = await getVotingStatus();
+  const { state, start, resultsPublic } = await getVotingStatus();
   if (state !== 'open') {
-    return <StatusScreen state={state} startLabel={formatIST(start)} />;
+    return <StatusScreen state={state} startLabel={formatIST(start)} showResults={resultsPublic} />;
   }
   const id = (await cookies()).get(VOTER_COOKIE)?.value;
   if (id && (await getVoterVote(hashId(id)))) redirect('/thanks');
@@ -40,6 +40,7 @@ async function Ballot({ params }: { params: Promise<{ token: string }> }) {
       teams={teams}
       siteKey={getServerEnv().TURNSTILE_SITE_KEY}
       voterId={id ?? null}
+      resultsPublic={resultsPublic}
     />
   );
 }

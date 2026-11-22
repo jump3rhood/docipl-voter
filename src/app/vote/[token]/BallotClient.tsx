@@ -16,11 +16,13 @@ export function BallotClient({
   teams,
   siteKey,
   voterId,
+  resultsPublic,
 }: {
   token: string;
   teams: Team[];
   siteKey: string;
   voterId: string | null;
+  resultsPublic: boolean;
 }) {
   const router = useRouter();
   // Hold the vote until a cleared cookie has been restored from the localStorage backup.
@@ -33,6 +35,7 @@ export function BallotClient({
   return (
     <BallotForm
       teams={teams}
+      resultsPublic={resultsPublic}
       canSubmit={turnstileToken !== null && voterIdReady}
       footerExtra={
         <>

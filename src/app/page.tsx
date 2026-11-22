@@ -12,7 +12,7 @@ import { VoterIdSync } from '@/components/VoterIdSync';
 
 async function Status() {
   await connection();
-  const { state, start } = await getVotingStatus();
+  const { state, start, resultsPublic } = await getVotingStatus();
   const id = (await cookies()).get(VOTER_COOKIE)?.value ?? null;
   // Someone who has voted goes straight to their thank-you page.
   // Once voting closes, the closed screen fits better.
@@ -21,7 +21,7 @@ async function Status() {
   return (
     <>
       <VoterIdSync currentId={id} redirectIfVoted={sendVotersToThanks} />
-      <StatusScreen state={state} startLabel={formatIST(start)} />
+      <StatusScreen state={state} startLabel={formatIST(start)} showResults={resultsPublic} />
     </>
   );
 }

@@ -3,7 +3,13 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import type { Team } from '@/lib/voting';
 
 export type AdminTeam = Team & { displayOrder: number; isActive: boolean };
-export type AdminConfig = { start: Date; end: Date; enabled: boolean; maxVotesPerDeviceIp: number };
+export type AdminConfig = {
+  start: Date;
+  end: Date;
+  enabled: boolean;
+  maxVotesPerDeviceIp: number;
+  resultsPublic: boolean;
+};
 
 const LOGO_BUCKET = 'team-logos';
 const MAX_LOGO_BYTES = 1024 * 1024;
@@ -20,7 +26,7 @@ function fail(what: string, error: DbError, map: Record<string, string> = {}): n
 export async function getAdminConfig(): Promise<AdminConfig> {
   const { data, error } = await getSupabaseAdmin()
     .from('voting_config')
-    .select('voting_start, voting_end, is_enabled, max_votes_per_device_ip')
+    .select('voting_start, voting_end, is_enabled, max_votes_per_device_ip, results_public')
     .eq('id', 1)
     .single();
   if (error) fail('getAdminConfig', error);
@@ -29,6 +35,7 @@ export async function getAdminConfig(): Promise<AdminConfig> {
     end: new Date(data.voting_end),
     enabled: data.is_enabled,
     maxVotesPerDeviceIp: data.max_votes_per_device_ip,
+    resultsPublic: data.results_public,
   };
 }
 
@@ -53,6 +60,16 @@ export async function setVotingEnabled(enabled: boolean): Promise<void> {
     .eq('id', 1)
     .select('id');
   if (error) fail('setVotingEnabled', error);
+  if (!data || data.length === 0) throw new Error('config_missing');
+}
+
+export async function setResultsPublic(resultsPublic: boolean): Promise<void> {
+  const { data, error } = await getSupabaseAdmin()
+    .from('voting_config')
+    .update({ results_public: resultsPublic })
+    .eq('id', 1)
+    .select('id');
+  if (error) fail('setResultsPublic', error);
   if (!data || data.length === 0) throw new Error('config_missing');
 }
 

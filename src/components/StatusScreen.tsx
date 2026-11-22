@@ -3,7 +3,16 @@ import Link from 'next/link';
 import { Reveal } from '@/components/motion/Reveal';
 import { PrimaryLink, privacyLinkClass } from '@/components/PrimaryLink';
 
-export function StatusScreen({ state, startLabel }: { state: VotingState; startLabel: string }) {
+export function StatusScreen({
+  state,
+  startLabel,
+  showResults = false,
+}: {
+  state: VotingState;
+  startLabel: string;
+  /** An admin has made results public. */
+  showResults?: boolean;
+}) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-4 pb-8 text-center">
       <Reveal>
@@ -36,6 +45,11 @@ export function StatusScreen({ state, startLabel }: { state: VotingState; startL
             <h1 className="text-3xl font-extrabold leading-tight">Voting has closed.</h1>
             <p className="text-base">Thank you to everyone who participated!</p>
           </>
+        )}
+        {showResults && (
+          <PrimaryLink href="/results">
+            {state === 'closed' ? 'VIEW FINAL RESULTS' : 'VIEW LIVE RESULTS'}
+          </PrimaryLink>
         )}
       </Reveal>
       <Reveal delay={0.16}>

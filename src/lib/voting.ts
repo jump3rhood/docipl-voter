@@ -28,14 +28,19 @@ export async function getActiveTeams(): Promise<Team[]> {
 
 export async function getVotingStatus(
   now: Date = new Date(),
-): Promise<{ state: VotingState; start: Date; end: Date }> {
+): Promise<{ state: VotingState; start: Date; end: Date; resultsPublic: boolean }> {
   const { data, error } = await getSupabaseAdmin()
     .from('voting_config')
-    .select('voting_start, voting_end, is_enabled')
+    .select('voting_start, voting_end, is_enabled, results_public')
     .eq('id', 1)
     .single();
   if (error) throw new Error(`getVotingStatus failed: ${error.message}`);
   const start = new Date(data.voting_start);
   const end = new Date(data.voting_end);
-  return { state: deriveVotingState({ start, end, enabled: data.is_enabled }, now), start, end };
+  return {
+    state: deriveVotingState({ start, end, enabled: data.is_enabled }, now),
+    start,
+    end,
+    resultsPublic: data.results_public,
+  };
 }

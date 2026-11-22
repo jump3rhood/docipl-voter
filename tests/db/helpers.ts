@@ -18,6 +18,7 @@ const SEED_CONFIG = {
   voting_start: '2026-11-21T09:00:00+05:30',
   voting_end: '2026-11-22T21:00:00+05:30',
   max_votes_per_device_ip: 3,
+  results_public: false,
 };
 
 const SEED_TEAM_ORDER = [

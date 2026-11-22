@@ -6,6 +6,8 @@ import { getAdminConfig } from '@/lib/admin';
 import { getResults } from '@/lib/results';
 import { formatPercent, formatVotes, totalLabel } from '@/lib/resultsFormat';
 import { DangerZone } from './DangerZone';
+import { ToggleButton } from '../voting/ToggleButton';
+import { toggleResultsPublicAction } from './actions';
 
 export const metadata: Metadata = { title: 'Results', robots: { index: false, follow: false } };
 
@@ -18,6 +20,20 @@ async function Results() {
   return (
     <div className="flex flex-col gap-8">
       <h1 className="sr-only">Results</h1>
+      <section aria-labelledby="visibility" className="flex flex-col gap-3">
+        <h2 id="visibility" className="font-bold">
+          Who can see results
+        </h2>
+        <p role="status" className="text-white/80">
+          {config.resultsPublic
+            ? 'Everyone: voters see a results link and can open the leaderboard.'
+            : 'Admins only: voters see just the ballot and thank-you page.'}
+        </p>
+        <form action={toggleResultsPublicAction}>
+          <input type="hidden" name="resultsPublic" value={config.resultsPublic ? 'false' : 'true'} />
+          <ToggleButton label={config.resultsPublic ? 'HIDE RESULTS FROM PUBLIC' : 'SHOW RESULTS TO PUBLIC'} />
+        </form>
+      </section>
       <p className="text-white/80">{totalLabel(results.total)}</p>
       <table className="w-full text-left">
         <thead>

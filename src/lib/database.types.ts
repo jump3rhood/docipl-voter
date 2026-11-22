@@ -99,14 +99,14 @@ isOneToOne: true
                   ]
                 },"voting_config": {
                   Row: {
-                    "id": number,"is_enabled": boolean,"max_votes_per_device_ip": number,"updated_at": string | null,"voting_end": string,"voting_start": string
+                    "id": number,"is_enabled": boolean,"max_votes_per_device_ip": number,"results_public": boolean,"updated_at": string | null,"voting_end": string,"voting_start": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "id"?: number,"is_enabled"?: boolean,"max_votes_per_device_ip"?: number,"updated_at"?: string | null,"voting_end": string,"voting_start": string
+                    "id"?: number,"is_enabled"?: boolean,"max_votes_per_device_ip"?: number,"results_public"?: boolean,"updated_at"?: string | null,"voting_end": string,"voting_start": string
                   }
                   Update: {
-                    "id"?: number,"is_enabled"?: boolean,"max_votes_per_device_ip"?: number,"updated_at"?: string | null,"voting_end"?: string,"voting_start"?: string
+                    "id"?: number,"is_enabled"?: boolean,"max_votes_per_device_ip"?: number,"results_public"?: boolean,"updated_at"?: string | null,"voting_end"?: string,"voting_start"?: string
                   }
                   Relationships: [
                     
