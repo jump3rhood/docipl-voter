@@ -9,7 +9,7 @@ test('ThankYou shows team', () => {
   expect(screen.getByText('Your vote has been recorded.')).toBeTruthy();
   expect(screen.getByText('You voted for:')).toBeTruthy();
   expect(screen.getByText('Code Red')).toBeTruthy();
-  expect(screen.getByRole('link', { name: 'VIEW LIVE RESULTS' }).getAttribute('href')).toBe('/results');
+  expect(screen.queryByRole('link', { name: /results/i })).toBeNull();
 });
 
 test('ThankYou without team', () => {

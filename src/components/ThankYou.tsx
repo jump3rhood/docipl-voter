@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Reveal } from '@/components/motion/Reveal';
-import { PrimaryLink, privacyLinkClass } from '@/components/PrimaryLink';
+import { privacyLinkClass } from '@/components/PrimaryLink';
 import { Celebration } from '@/components/Celebration';
 
 export function ThankYou({
@@ -27,7 +27,6 @@ export function ThankYou({
           </div>
         </Reveal>
       )}
-      <PrimaryLink href="/results">VIEW LIVE RESULTS</PrimaryLink>
       <Link href="/privacy" className={privacyLinkClass}>
         Privacy
       </Link>

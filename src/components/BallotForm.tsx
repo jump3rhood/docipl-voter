@@ -20,8 +20,8 @@ const prewarmSheet = () => void import('@/components/ConfirmVoteSheet');
 const ERROR_ID = 'ballot-error';
 
 const TERMINAL: Partial<Record<VoteErrorCode, { label: string; href: string }>> = {
-  already_voted: { label: 'VIEW LIVE RESULTS', href: '/results' },
-  voting_closed: { label: 'VIEW FINAL RESULTS', href: '/results' },
+  already_voted: { label: 'SEE YOUR VOTE', href: '/thanks' },
+  voting_closed: { label: 'Back to home', href: '/' },
   voting_not_open: { label: 'Back to home', href: '/' },
 };
 

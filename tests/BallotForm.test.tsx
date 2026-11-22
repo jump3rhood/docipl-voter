@@ -83,8 +83,8 @@ test('token_invalid shows new ballot link', async () => {
 });
 
 test.each([
-  ['already_voted', 'VIEW LIVE RESULTS', '/results'],
-  ['voting_closed', 'VIEW FINAL RESULTS', '/results'],
+  ['already_voted', 'SEE YOUR VOTE', '/thanks'],
+  ['voting_closed', 'Back to home', '/'],
   ['voting_not_open', 'Back to home', '/'],
 ] as const)('%s is terminal: escape link and no cast button', async (code, label, href) => {
   const submit = vi.fn(async (): Promise<SubmitResult> => ({ ok: false, code }));

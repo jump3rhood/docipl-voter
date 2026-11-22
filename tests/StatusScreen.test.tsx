@@ -24,11 +24,11 @@ test('privacy link is present', () => {
   render(<StatusScreen state="before" startLabel="x" />);
   expect(screen.getByRole('link', { name: 'Privacy' })).toHaveAttribute('href', '/privacy');
 });
-test('closed links to results', () => {
+test('closed does not link to results', () => {
   render(<StatusScreen state="closed" startLabel="x" />);
   expect(screen.getByText('Voting has closed.')).toBeInTheDocument();
   expect(screen.getByText('Thank you to everyone who participated!')).toBeInTheDocument();
-  expect(screen.getByRole('link', { name: 'VIEW FINAL RESULTS' })).toHaveAttribute('href', '/results');
+  expect(screen.queryByRole('link', { name: /results/i })).toBeNull();
 });
 test('paused copy', () => {
   render(<StatusScreen state="paused" startLabel="x" />);

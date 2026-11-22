@@ -35,7 +35,6 @@ export function StatusScreen({ state, startLabel }: { state: VotingState; startL
           <>
             <h1 className="text-3xl font-extrabold leading-tight">Voting has closed.</h1>
             <p className="text-base">Thank you to everyone who participated!</p>
-            <PrimaryLink href="/results">VIEW FINAL RESULTS</PrimaryLink>
           </>
         )}
       </Reveal>

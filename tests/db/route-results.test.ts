@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 const failure = vi.hoisted(() => ({ on: false }));
+const auth = vi.hoisted(() => ({ admin: true }));
+
+vi.mock('@/lib/adminAuth', () => ({ isAdmin: vi.fn(async () => auth.admin) }));
 
 vi.mock('next/server', async (importActual) => ({
   ...(await importActual<typeof import('next/server')>()),
@@ -23,17 +26,24 @@ import { resetData } from './helpers';
 
 beforeEach(async () => {
   failure.on = false;
+  auth.admin = true;
   await resetData();
 });
 afterEach(() => vi.restoreAllMocks());
 
 describe('GET /api/results', () => {
-  test('200 with payload and cache header', async () => {
+  test('401 and no results for non-admins', async () => {
+    auth.admin = false;
+    const res = await GET();
+    expect(res.status).toBe(401);
+    expect(res.headers.get('cache-control')).toBe('private, no-store');
+    expect(await res.json()).toEqual({ error: 'unauthorized' });
+  });
+
+  test('200 with payload for admins, never CDN-cached', async () => {
     const res = await GET();
     expect(res.status).toBe(200);
-    expect(res.headers.get('cache-control')).toBe(
-      'public, s-maxage=10, stale-while-revalidate=5',
-    );
+    expect(res.headers.get('cache-control')).toBe('private, no-store');
     const body = await res.json();
     expect(Object.keys(body).sort()).toEqual(['rows', 'total']);
     expect(body.total).toBe(0);
@@ -55,7 +65,7 @@ describe('GET /api/results', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const res = await GET();
     expect(res.status).toBe(500);
-    expect(res.headers.get('cache-control')).toBe('no-store');
+    expect(res.headers.get('cache-control')).toBe('private, no-store');
     expect(await res.json()).toEqual({ error: 'unavailable' });
     expect(spy).toHaveBeenCalledWith('[results] unavailable', 'boom');
   });

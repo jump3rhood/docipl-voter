@@ -20,7 +20,7 @@ Plain-language steps for running the Doc IPL vote. Admin lives at `/admin` (log 
 
 ## Watching
 - `/admin` shows total votes, votes per team and the current status.
-- `/results` is the public live leaderboard; it refreshes by itself.
+- `/results` is the live leaderboard, for admins only (log in first; voters are sent to the home page). It refreshes by itself. Voters only see the vote page and their thank-you page.
 - In the Vercel logs, watch for: `[vote] no client IP header`, `turnstile_failed`, and bursts of 429 (too many requests) responses.
 
 ## Pausing in an emergency

@@ -14,8 +14,8 @@ async function Status() {
   await connection();
   const { state, start } = await getVotingStatus();
   const id = (await cookies()).get(VOTER_COOKIE)?.value ?? null;
-  // Someone who has voted goes straight to their thank-you page (and its results link).
-  // Once voting closes, the closed screen with "final results" fits better.
+  // Someone who has voted goes straight to their thank-you page.
+  // Once voting closes, the closed screen fits better.
   const sendVotersToThanks = state !== 'closed';
   if (sendVotersToThanks && id && (await getVoterVote(hashId(id)))) redirect('/thanks');
   return (

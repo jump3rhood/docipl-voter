@@ -38,6 +38,9 @@ async function Results() {
         </tbody>
       </table>
       <div className="flex flex-col gap-3">
+        <a href="/results" className={linkClass}>
+          Open live leaderboard
+        </a>
         <a href="/admin/export?type=results" className={linkClass}>
           Download results CSV
         </a>
