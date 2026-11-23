@@ -4,11 +4,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TurnstileWidget } from '@/components/TurnstileWidget';
 
 let opts: Record<string, unknown>;
+let api: NonNullable<Window['turnstile']>;
 
 beforeEach(() => {
   vi.useFakeTimers();
   opts = {};
-  window.turnstile = {
+  api = {
     render: vi.fn((_c: HTMLElement, o: Record<string, unknown>) => {
       opts = o;
       return 'w1';
@@ -16,54 +17,118 @@ beforeEach(() => {
     reset: vi.fn(),
     remove: vi.fn(),
   };
+  window.turnstile = api;
 });
 
 afterEach(() => {
   vi.useRealTimers();
   delete window.turnstile;
+  document.getElementById('cf-turnstile-script')?.remove();
 });
 
 function mount() {
   const onError = vi.fn();
-  render(<TurnstileWidget siteKey="k" onToken={() => {}} onError={onError} resetSignal={0} />);
-  return onError;
+  const onInteractive = vi.fn();
+  render(
+    <TurnstileWidget
+      siteKey="k"
+      onToken={() => {}}
+      onError={onError}
+      onInteractive={onInteractive}
+      resetSignal={0}
+    />,
+  );
+  return { onError, onInteractive };
 }
 
 describe('TurnstileWidget watchdog', () => {
-  it('times out without any interaction', () => {
-    const onError = mount();
+  it('waits 20s for a token before timing out', () => {
+    const { onError } = mount();
     act(() => {
-      vi.advanceTimersByTime(12_500);
+      vi.advanceTimersByTime(19_000);
+    });
+    expect(onError).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(1_500);
     });
     expect(onError).toHaveBeenCalledWith('timeout');
   });
 
-  it('is paused during an interactive challenge', () => {
-    const onError = mount();
+  it('does not reset a running check on timeout, so a late token still arrives', () => {
+    const onToken = vi.fn();
+    const onError = vi.fn();
+    render(<TurnstileWidget siteKey="k" onToken={onToken} onError={onError} resetSignal={0} />);
     act(() => {
-      (opts['before-interactive-callback'] as () => void)();
-      vi.advanceTimersByTime(20_000);
+      vi.advanceTimersByTime(21_000);
+    });
+    expect(onError).toHaveBeenCalledWith('timeout');
+    expect(api.reset).not.toHaveBeenCalled();
+    act(() => {
+      (opts.callback as (t: string) => void)('late');
+    });
+    expect(onToken).toHaveBeenCalledWith('late');
+  });
+
+  it('retries once by resetting on an error', () => {
+    const { onError } = mount();
+    act(() => {
+      (opts['error-callback'] as () => void)();
+    });
+    expect(onError).toHaveBeenCalledWith('error');
+    expect(api.reset).toHaveBeenCalledTimes(1);
+    act(() => {
+      (opts['error-callback'] as () => void)();
+    });
+    expect(api.reset).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts the timer only once the script is ready', () => {
+    delete window.turnstile;
+    const { onError } = mount();
+    act(() => {
+      vi.advanceTimersByTime(8_000);
+      window.turnstile = api;
+      vi.advanceTimersByTime(100);
+    });
+    expect(api.render).toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(15_000);
     });
     expect(onError).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(5_500);
+    });
+    expect(onError).toHaveBeenCalledWith('timeout');
+  });
+
+  it('is paused during an interactive challenge and reports it', () => {
+    const { onError, onInteractive } = mount();
+    act(() => {
+      (opts['before-interactive-callback'] as () => void)();
+      vi.advanceTimersByTime(30_000);
+    });
+    expect(onError).not.toHaveBeenCalled();
+    expect(onInteractive).toHaveBeenLastCalledWith(true);
   });
 
   it('restarts after interaction', () => {
-    const onError = mount();
+    const { onError, onInteractive } = mount();
     act(() => {
       (opts['before-interactive-callback'] as () => void)();
-      vi.advanceTimersByTime(20_000);
+      vi.advanceTimersByTime(30_000);
       (opts['after-interactive-callback'] as () => void)();
-      vi.advanceTimersByTime(12_500);
+      vi.advanceTimersByTime(20_500);
     });
+    expect(onInteractive).toHaveBeenLastCalledWith(false);
     expect(onError).toHaveBeenCalledWith('timeout');
   });
 
   it('does not restart the watchdog after interaction while a token is held', () => {
-    const onError = mount();
+    const { onError } = mount();
     act(() => {
       (opts.callback as (t: string) => void)('t');
       (opts['after-interactive-callback'] as () => void)();
-      vi.advanceTimersByTime(13_000);
+      vi.advanceTimersByTime(21_000);
     });
     expect(onError).not.toHaveBeenCalled();
   });

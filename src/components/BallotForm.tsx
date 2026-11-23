@@ -9,6 +9,8 @@ import type { Team } from '@/lib/voting';
 import { voteErrorMessage, type VoteErrorCode } from '@/lib/voteMessages';
 import { TeamCard } from '@/components/TeamCard';
 import { PrimaryLink, primaryButtonClass, privacyLinkClass } from '@/components/PrimaryLink';
+import { Check, Spinner } from '@/components/VerifyProgress';
+import { useTimedStep } from '@/lib/useTimedStep';
 
 // Lazy: keeps the sheet (and AnimatePresence) out of the ballot's first-load JS.
 const ConfirmVoteSheet = dynamic(
@@ -18,6 +20,16 @@ const ConfirmVoteSheet = dynamic(
 const prewarmSheet = () => void import('@/components/ConfirmVoteSheet');
 
 const ERROR_ID = 'ballot-error';
+
+// The server checks Turnstile and records the vote in one request; the label moves on after a
+// beat so a slow request still looks alive.
+const SUBMIT_STEPS = [
+  { at: 0, label: 'Sending your vote…' },
+  { at: 1_200, label: 'Verifying your vote…' },
+] as const;
+const SUBMIT_OFFSETS = SUBMIT_STEPS.map((s) => s.at);
+/** How long "Vote verified!" stays up before moving on to the thank-you page. */
+export const VERIFIED_PAUSE_MS = 900;
 
 type Escape = { label: string; href: string };
 const TERMINAL: Partial<Record<VoteErrorCode, Escape>> = {
@@ -55,6 +67,8 @@ export function BallotForm({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<VoteErrorCode | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [voteVerified, setVoteVerified] = useState(false);
+  const submitStep = useTimedStep(SUBMIT_OFFSETS, submitting);
   const inFlight = useRef(false);
   const castRef = useRef<HTMLButtonElement>(null);
   const [prevCanSubmit, setPrevCanSubmit] = useState(canSubmit);
@@ -79,6 +93,8 @@ export function BallotForm({
     }
     if (result.ok) {
       // Keep the lock held: the parent navigates away from the form.
+      setVoteVerified(true);
+      await new Promise((r) => setTimeout(r, VERIFIED_PAUSE_MS));
       onVoted(result.teamName);
       return;
     }
@@ -91,6 +107,13 @@ export function BallotForm({
 
   const terminal = error ? (resultsPublic ? TERMINAL_PUBLIC : TERMINAL)[error] : undefined;
   const message = error ? voteErrorMessage(error) : null;
+  const submitLabel = voteVerified ? 'Vote verified!' : SUBMIT_STEPS[submitStep].label;
+  const submittingContent = (
+    <>
+      {voteVerified ? <Check className="h-5 w-5 text-navy" /> : <Spinner className="h-5 w-5 border-navy" />}
+      {submitLabel}
+    </>
+  );
 
   return (
     <div className="flex flex-1 flex-col">
@@ -154,13 +177,7 @@ export function BallotForm({
           className={`${primaryButtonClass} gap-2 disabled:cursor-not-allowed disabled:opacity-50`}
         >
           {submitting ? (
-            <>
-              <span
-                aria-hidden="true"
-                className="h-5 w-5 animate-spin rounded-full border-2 border-navy border-t-transparent"
-              />
-              Submitting…
-            </>
+            submittingContent
           ) : selectedId && !canSubmit ? (
             'Verifying…'
           ) : (
@@ -168,6 +185,9 @@ export function BallotForm({
           )}
         </button>
         )}
+        <p role="status" aria-live="polite" className="sr-only">
+          {submitting ? submitLabel : ''}
+        </p>
         <div className="mt-1 text-center">
           <Link href="/privacy" className={privacyLinkClass}>
             Privacy
@@ -180,6 +200,7 @@ export function BallotForm({
           open={confirmOpen}
           submitting={submitting}
           canSubmit={canSubmit}
+          submittingContent={submittingContent}
           returnFocusRef={castRef}
           fallbackFocusId={ERROR_ID}
           onConfirm={handleSubmit}

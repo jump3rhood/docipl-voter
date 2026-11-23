@@ -6,6 +6,7 @@ import type { Team } from '@/lib/voting';
 import { BallotForm } from '@/components/BallotForm';
 import { TurnstileWidget } from '@/components/TurnstileWidget';
 import { VerifyNotice } from '@/components/VerifyNotice';
+import { VerifyProgress } from '@/components/VerifyProgress';
 import { collectDeviceSignal } from '@/lib/deviceSignal';
 import { markCelebrate } from '@/lib/celebrate';
 import { postVote } from '@/lib/submitVote';
@@ -30,6 +31,7 @@ export function BallotClient({
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [resetSignal, setResetSignal] = useState(0);
   const [verifyStuck, setVerifyStuck] = useState(false);
+  const [interactive, setInteractive] = useState(false);
   const deviceSignal = useRef<Promise<string | null> | null>(null);
 
   return (
@@ -39,6 +41,11 @@ export function BallotClient({
       canSubmit={turnstileToken !== null && voterIdReady}
       footerExtra={
         <>
+          {verifyStuck && turnstileToken === null ? (
+            <VerifyNotice onReload={() => window.location.reload()} />
+          ) : (
+            <VerifyProgress verified={turnstileToken !== null} interactive={interactive} />
+          )}
           <TurnstileWidget
             siteKey={siteKey}
             onToken={(t) => {
@@ -46,11 +53,9 @@ export function BallotClient({
               if (t) setVerifyStuck(false);
             }}
             onError={() => setVerifyStuck(true)}
+            onInteractive={setInteractive}
             resetSignal={resetSignal}
           />
-          {verifyStuck && turnstileToken === null && (
-            <VerifyNotice onReload={() => window.location.reload()} />
-          )}
         </>
       }
       submit={async (teamId) => {
