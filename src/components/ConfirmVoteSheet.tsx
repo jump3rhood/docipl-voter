@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import { AnimatePresence, m } from 'framer-motion';
-import type { RefObject } from 'react';
+import type { ReactNode, RefObject } from 'react';
 import type { Team } from '@/lib/voting';
 import { TeamBadge } from '@/components/TeamBadge';
 import { primaryButtonClass } from '@/components/PrimaryLink';
@@ -12,6 +12,8 @@ type Props = {
   open: boolean;
   submitting: boolean;
   canSubmit?: boolean;
+  /** Button content while submitting (e.g. step-by-step progress). */
+  submittingContent?: ReactNode;
   returnFocusRef?: RefObject<HTMLElement | null>;
   /** id of an element (e.g. the ballot error alert) to focus if no return target is usable. */
   fallbackFocusId?: string;
@@ -27,7 +29,7 @@ function tryFocus(el: HTMLElement | null | undefined): boolean {
   return document.activeElement === el;
 }
 
-function Sheet({ team, submitting, canSubmit = true, returnFocusRef, fallbackFocusId, onConfirm, onCancel }: Omit<Props, 'open'> & { team: Team }) {
+function Sheet({ team, submitting, canSubmit = true, submittingContent, returnFocusRef, fallbackFocusId, onConfirm, onCancel }: Omit<Props, 'open'> & { team: Team }) {
   const panelRef = useRef<HTMLDivElement>(null);
   const yesRef = useRef<HTMLButtonElement>(null);
   const submittingRef = useRef(submitting);
@@ -115,16 +117,18 @@ function Sheet({ team, submitting, canSubmit = true, returnFocusRef, fallbackFoc
           type="button"
           onClick={onConfirm}
           disabled={submitting || !canSubmit}
-          className={`${primaryButtonClass} mt-2 gap-2 disabled:cursor-not-allowed disabled:opacity-50`}
+          className={`${primaryButtonClass} mt-2 gap-2 ${submitting ? 'disabled:cursor-wait' : 'disabled:cursor-not-allowed disabled:opacity-50'}`}
         >
           {submitting ? (
-            <>
-              <span
-                aria-hidden="true"
-                className="h-5 w-5 animate-spin rounded-full border-2 border-navy border-t-transparent"
-              />
-              Submitting…
-            </>
+            (submittingContent ?? (
+              <>
+                <span
+                  aria-hidden="true"
+                  className="h-5 w-5 animate-spin rounded-full border-2 border-navy border-t-transparent"
+                />
+                Submitting…
+              </>
+            ))
           ) : !canSubmit ? (
             'Verifying…'
           ) : (

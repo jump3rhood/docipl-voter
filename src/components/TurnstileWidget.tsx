@@ -19,10 +19,13 @@ export type TurnstileErrorReason = 'timeout' | 'error';
 
 const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 const SCRIPT_ID = 'cf-turnstile-script';
-const SCRIPT_TIMEOUT_MS = 10_000;
-const TOKEN_TIMEOUT_MS = 12_000;
+/** After this the voter is told it's slow, but we keep waiting for the script. */
+const SCRIPT_SLOW_MS = 10_000;
+const SCRIPT_GIVE_UP_MS = 120_000;
+/** Counted from when the script is ready, so a slow download doesn't eat into it. */
+const TOKEN_TIMEOUT_MS = 20_000;
 
-function whenTurnstileReady(onReady: (api: TurnstileApi) => void, onTimeout: () => void): () => void {
+function whenTurnstileReady(onReady: (api: TurnstileApi) => void, onSlow: () => void): () => void {
   if (!document.getElementById(SCRIPT_ID)) {
     const s = document.createElement('script');
     s.id = SCRIPT_ID;
@@ -31,29 +34,42 @@ function whenTurnstileReady(onReady: (api: TurnstileApi) => void, onTimeout: () 
     s.defer = true;
     document.head.appendChild(s);
   }
-  return pollUntil(() => window.turnstile, {
+  const slow = setTimeout(onSlow, SCRIPT_SLOW_MS);
+  const cancelPoll = pollUntil(() => window.turnstile, {
     intervalMs: 50,
-    timeoutMs: SCRIPT_TIMEOUT_MS,
-    onReady,
-    onTimeout,
+    timeoutMs: SCRIPT_GIVE_UP_MS,
+    onReady: (api) => {
+      clearTimeout(slow);
+      onReady(api);
+    },
+    // The notice has been up since SCRIPT_SLOW_MS; its Reload button is the way out.
+    onTimeout: () => {},
   });
+  return () => {
+    clearTimeout(slow);
+    cancelPoll();
+  };
 }
 
 export function TurnstileWidget({
   siteKey,
   onToken,
   onError,
+  onInteractive,
   resetSignal,
 }: {
   siteKey: string;
   onToken: (t: string | null) => void;
   onError?: (reason: TurnstileErrorReason) => void;
+  /** True while Turnstile shows a visible challenge the voter has to complete. */
+  onInteractive?: (active: boolean) => void;
   resetSignal: number;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetId = useRef<string | null>(null);
   const onTokenRef = useRef(onToken);
   const onErrorRef = useRef(onError);
+  const onInteractiveRef = useRef(onInteractive);
   const lastReset = useRef(resetSignal);
   const watchdog = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const retried = useRef(false);
@@ -63,6 +79,7 @@ export function TurnstileWidget({
   useEffect(() => {
     onTokenRef.current = onToken;
     onErrorRef.current = onError;
+    onInteractiveRef.current = onInteractive;
   });
 
   useEffect(() => {
@@ -86,30 +103,35 @@ export function TurnstileWidget({
       stopWatchdog();
       watchdog.current = setTimeout(() => fail('timeout'), TOKEN_TIMEOUT_MS);
     };
-    // Report the failure, then retry once (per successful token) by resetting the widget.
+    // Report the failure. A timeout leaves the running check alone (resetting would throw away
+    // work that may be nearly done); an error retries once (per successful token) via reset.
     const fail = (reason: TurnstileErrorReason) => {
       if (disposed) return;
       stopWatchdog();
       onErrorRef.current?.(reason);
-      if (!retried.current && widgetId.current !== null) {
+      if (reason === 'error' && !retried.current && widgetId.current !== null) {
         retried.current = true;
         safeReset();
         startWatchdog();
       }
     };
 
-    startWatchdog();
     const cancel = whenTurnstileReady(
       (api) => {
+        startWatchdog();
         try {
           widgetId.current = api.render(container, {
             sitekey: siteKey,
             appearance: 'interaction-only',
             'refresh-expired': 'auto',
             // A visible challenge is the user's time, not a stall: pause the watchdog.
-            'before-interactive-callback': stopWatchdog,
+            'before-interactive-callback': () => {
+              stopWatchdog();
+              onInteractiveRef.current?.(true);
+            },
             // ...but a challenge that ended with a token held needs no watchdog.
             'after-interactive-callback': () => {
+              onInteractiveRef.current?.(false);
               if (!hasTokenRef.current) startWatchdog();
             },
             callback: (t: string) => {

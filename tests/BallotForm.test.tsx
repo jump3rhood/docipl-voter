@@ -12,7 +12,7 @@ const teams: Team[] = [
 ];
 
 const okSubmit = () => vi.fn(async (): Promise<SubmitResult> => ({ ok: true, teamName: 'Code Red' }));
-const voteButton = () => screen.getByRole('button', { name: /^(cast my vote|submitting)/i });
+const voteButton = () => screen.getByRole('button', { name: /^(cast my vote|sending|verifying your vote|vote verified)/i });
 async function castAndConfirm() {
   await userEvent.click(voteButton());
   await userEvent.click(await screen.findByRole('button', { name: /yes, cast my vote/i }));
@@ -48,7 +48,21 @@ test('submits selected team and calls onVoted', async () => {
   await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
   await castAndConfirm();
   expect(submit).toHaveBeenCalledWith('id-code-red');
-  expect(onVoted).toHaveBeenCalledWith('Code Red');
+  expect(await screen.findAllByText('Vote verified!')).not.toHaveLength(0);
+  expect(onVoted).not.toHaveBeenCalled();
+  await waitFor(() => expect(onVoted).toHaveBeenCalledWith('Code Red'), { timeout: 2000 });
+});
+
+test('a slow submit moves from sending to verifying', async () => {
+  let resolve!: (r: SubmitResult) => void;
+  const submit = vi.fn(() => new Promise<SubmitResult>((r) => (resolve = r)));
+  render(<BallotForm teams={teams} submit={submit} onVoted={vi.fn()} />);
+  await userEvent.click(screen.getByRole('radio', { name: /code red/i }));
+  await castAndConfirm();
+  expect(screen.getAllByText('Sending your vote…')).not.toHaveLength(0);
+  expect(await screen.findAllByText('Verifying your vote…', {}, { timeout: 2000 })).not.toHaveLength(0);
+  resolve({ ok: false, code: 'network' });
+  await screen.findByRole('alert');
 });
 
 test('submits once on double click', async () => {
