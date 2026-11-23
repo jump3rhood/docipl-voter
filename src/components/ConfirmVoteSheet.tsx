@@ -117,7 +117,7 @@ function Sheet({ team, submitting, canSubmit = true, submittingContent, returnFo
           type="button"
           onClick={onConfirm}
           disabled={submitting || !canSubmit}
-          className={`${primaryButtonClass} mt-2 gap-2 disabled:cursor-not-allowed disabled:opacity-50`}
+          className={`${primaryButtonClass} mt-2 gap-2 ${submitting ? 'disabled:cursor-wait' : 'disabled:cursor-not-allowed disabled:opacity-50'}`}
         >
           {submitting ? (
             (submittingContent ?? (

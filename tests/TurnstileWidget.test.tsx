@@ -101,6 +101,21 @@ describe('TurnstileWidget watchdog', () => {
     expect(onError).toHaveBeenCalledWith('timeout');
   });
 
+  it('reports a slow script after 10s but still renders when it arrives', () => {
+    delete window.turnstile;
+    const { onError } = mount();
+    act(() => {
+      vi.advanceTimersByTime(10_500);
+    });
+    expect(onError).toHaveBeenCalledWith('timeout');
+    expect(api.render).not.toHaveBeenCalled();
+    act(() => {
+      window.turnstile = api;
+      vi.advanceTimersByTime(6_000);
+    });
+    expect(api.render).toHaveBeenCalledTimes(1);
+  });
+
   it('is paused during an interactive challenge and reports it', () => {
     const { onError, onInteractive } = mount();
     act(() => {

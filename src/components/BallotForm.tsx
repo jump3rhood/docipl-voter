@@ -174,7 +174,7 @@ export function BallotForm({
           type="button"
           onClick={() => setConfirmOpen(true)}
           disabled={!selectedId || !canSubmit || submitting}
-          className={`${primaryButtonClass} gap-2 disabled:cursor-not-allowed disabled:opacity-50`}
+          className={`${primaryButtonClass} gap-2 ${submitting ? 'disabled:cursor-wait' : 'disabled:cursor-not-allowed disabled:opacity-50'}`}
         >
           {submitting ? (
             submittingContent

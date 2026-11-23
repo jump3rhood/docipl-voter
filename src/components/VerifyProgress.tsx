@@ -64,7 +64,7 @@ export function VerifyProgress({ verified, interactive = false }: { verified: bo
     <p
       role="status"
       aria-live="polite"
-      className="mb-2 flex min-h-5 items-center justify-center gap-2 text-center text-sm font-semibold text-white/90"
+      className="mx-auto mb-2 flex w-fit items-center justify-center gap-2 rounded-full bg-navy-dark/90 px-3 py-1 text-center text-sm font-semibold text-white"
     >
       {content}
     </p>

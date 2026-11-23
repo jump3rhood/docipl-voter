@@ -19,11 +19,13 @@ export type TurnstileErrorReason = 'timeout' | 'error';
 
 const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 const SCRIPT_ID = 'cf-turnstile-script';
-const SCRIPT_TIMEOUT_MS = 10_000;
+/** After this the voter is told it's slow, but we keep waiting for the script. */
+const SCRIPT_SLOW_MS = 10_000;
+const SCRIPT_GIVE_UP_MS = 120_000;
 /** Counted from when the script is ready, so a slow download doesn't eat into it. */
 const TOKEN_TIMEOUT_MS = 20_000;
 
-function whenTurnstileReady(onReady: (api: TurnstileApi) => void, onTimeout: () => void): () => void {
+function whenTurnstileReady(onReady: (api: TurnstileApi) => void, onSlow: () => void): () => void {
   if (!document.getElementById(SCRIPT_ID)) {
     const s = document.createElement('script');
     s.id = SCRIPT_ID;
@@ -32,12 +34,21 @@ function whenTurnstileReady(onReady: (api: TurnstileApi) => void, onTimeout: () 
     s.defer = true;
     document.head.appendChild(s);
   }
-  return pollUntil(() => window.turnstile, {
+  const slow = setTimeout(onSlow, SCRIPT_SLOW_MS);
+  const cancelPoll = pollUntil(() => window.turnstile, {
     intervalMs: 50,
-    timeoutMs: SCRIPT_TIMEOUT_MS,
-    onReady,
-    onTimeout,
+    timeoutMs: SCRIPT_GIVE_UP_MS,
+    onReady: (api) => {
+      clearTimeout(slow);
+      onReady(api);
+    },
+    // The notice has been up since SCRIPT_SLOW_MS; its Reload button is the way out.
+    onTimeout: () => {},
   });
+  return () => {
+    clearTimeout(slow);
+    cancelPoll();
+  };
 }
 
 export function TurnstileWidget({
